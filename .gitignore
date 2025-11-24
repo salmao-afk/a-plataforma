@@ -1,0 +1,17 @@
+# IntelliJ
+.idea/
+*.iml
+*.iws
+
+# Java / Maven (Backend)
+backend/target/
+backend/*.log
+
+# Docker Environment (NUNCA partilhem passwords reais)
+.env
+
+# Node / Nuxt (Frontend)
+frontend/node_modules/
+frontend/.nuxt/
+frontend/.output/
+frontend/dist/
