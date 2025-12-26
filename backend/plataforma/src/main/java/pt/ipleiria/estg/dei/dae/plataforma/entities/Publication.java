@@ -6,6 +6,7 @@ import jakarta.transaction.Status;
 import jakarta.validation.constraints.NotNull;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -28,7 +29,7 @@ public class Publication extends Versionable implements Serializable {
     //TODO: descricao com IA
 
     @NotNull
-    private Date publicationDate;
+    private LocalDate publicationDate;
 
     private String filename;
     private String filepath;
@@ -41,6 +42,9 @@ public class Publication extends Versionable implements Serializable {
 
     @NotNull
     private String scientificArea;
+
+    @NotNull
+    private List<String> authors = new ArrayList<>();
 
     @NotNull
     private String type;
@@ -70,7 +74,7 @@ public class Publication extends Versionable implements Serializable {
     public Publication() {
     }
 
-    public Publication(String title, String description, Date publicationDate, String scientificArea, String type) {
+    public Publication(String title, String description, LocalDate publicationDate, String scientificArea, String type) {
         this.title = title;
         this.description = description;
         this.publicationDate = publicationDate;
@@ -102,11 +106,11 @@ public class Publication extends Versionable implements Serializable {
         this.description = description;
     }
 
-    public Date getPublicationDate() {
+    public LocalDate getPublicationDate() {
         return publicationDate;
     }
 
-    public void setPublicationDate(Date publicationDate) {
+    public void setPublicationDate(LocalDate publicationDate) {
         this.publicationDate = publicationDate;
     }
 
@@ -120,6 +124,14 @@ public class Publication extends Versionable implements Serializable {
 
     public String getFilepath() {
         return filepath;
+    }
+
+    public List<String> getAuthors() {
+        return authors;
+    }
+
+    public void setAuthors(List<String> authors) {
+        this.authors = authors;
     }
 
     public void setFilepath(String filepath) {

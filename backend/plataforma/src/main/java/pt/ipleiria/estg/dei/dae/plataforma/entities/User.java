@@ -11,8 +11,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "users", uniqueConstraints = { @UniqueConstraint(columnNames = "email") })
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn(name = "role", discriminatorType = DiscriminatorType.STRING)
+@NamedQueries({
+        @NamedQuery(name = "getAllUsers", query = "SELECT u FROM User u ORDER BY u.username ASC")
+})
 public class User extends Versionable implements Serializable {
 
     @Version
@@ -31,7 +32,15 @@ public class User extends Versionable implements Serializable {
     String email;
 
     @NotNull
+    String name;
+
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    private UserRole role;
+
+    @NotNull
     private boolean active = true;
+
     @ManyToMany
     @JoinTable(name = "users_subscriptions",
             joinColumns = @JoinColumn(name = "username"),
@@ -41,11 +50,13 @@ public class User extends Versionable implements Serializable {
     @OneToMany(mappedBy = "uploader")
     private List<Publication> myPublications = new ArrayList<>();
 
-    public User(int version, String username, String password, String email, boolean active) {
+    public User(int version, String username, String password, String email, String name, UserRole role, boolean active) {
         this.version = version;
         this.username = username;
         this.password = password;
         this.email = email;
+        this.name = name;
+        this.role = role;
         this.active = active;
     }
 
@@ -82,6 +93,22 @@ public class User extends Versionable implements Serializable {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
     }
 
     public boolean isActive() {
