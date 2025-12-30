@@ -4,8 +4,10 @@ import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.validation.ConstraintViolationException;
+import org.hibernate.Hibernate;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.UserRole;
+import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 import pt.ipleiria.estg.dei.dae.plataforma.security.Hasher;
 
 import java.util.List;
@@ -39,12 +41,39 @@ public class UserBean {
 
     }
 
-    public User find(String username){
-        return em.find(User.class, username);
+    // No UserBean.java
+
+
+    public User find(String username) {
+        User user = em.find(User.class, username);
+        if (user != null) {
+            // Isto força o carregamento da lista enquanto a transação está aberta
+            Hibernate.initialize(user.getSubscribedTags());
+        }
+        return user;
     }
 
-    public List<User> findAll(){
-        return em.createNamedQuery("getAllUsers", User.class).getResultList();
+    public User findOrFail(String username) throws MyEntityNotFoundException {
+        try {
+            // O "LEFT JOIN FETCH" obriga a carregar as tags imediatamente
+            return em.createQuery(
+                            "SELECT u FROM User u LEFT JOIN FETCH u.subscribedTags WHERE u.username = :username",
+                            User.class)
+                    .setParameter("username", username)
+                    .getSingleResult();
+        } catch (Exception e) {
+            throw new MyEntityNotFoundException();
+        }
+    }
+
+    public List<User> findAll() {
+        // Usamos 'LEFT JOIN FETCH' para garantir que trazemos o user
+        // e as tags na mesma query.
+        // O 'LEFT' garante que users sem tags também aparecem.
+        return em.createQuery(
+                "SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.subscribedTags",
+                User.class
+        ).getResultList();
     }
 
     public boolean canLogin(String username, String password) {

@@ -2,12 +2,15 @@ package pt.ipleiria.estg.dei.dae.plataforma.ws;
 
 import jakarta.ejb.EJB;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.SecurityContext;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.PublicationDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.PublicationBean;
+import pt.ipleiria.estg.dei.dae.plataforma.security.Authenticated;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,9 +19,15 @@ import java.util.List;
 import java.util.Map;
 
 @Path("/publicacoes")
+@Authenticated
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.MULTIPART_FORM_DATA)
 public class PublicationService {
     @EJB
     private PublicationBean publicationBean;
+
+    @Context
+    private SecurityContext securityContext; //to get username from token
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -29,12 +38,16 @@ public class PublicationService {
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     public Response createPublication(MultipartFormDataInput input) throws IOException {
+
+        //get username from token
+        String uploaderUsername = securityContext.getUserPrincipal().getName();
+
+        //read data from multipart form
         Map<String, List<InputPart>> uploadForm = input.getFormDataMap();
 
         String title = getTextValue(uploadForm, "title");
         String type = getTextValue(uploadForm, "type");
         String scientificArea = getTextValue(uploadForm, "scientificArea");
-        String username = getTextValue(uploadForm, "uploaderUsername");
 
         // Autores e Tags vêm como listas ou strings separadas.
         // Simplificação: vamos assumir que vêm separadas por vírgulas ou várias partes.
@@ -48,11 +61,11 @@ public class PublicationService {
 
         if (fileParts != null && !fileParts.isEmpty()) {
             InputPart filePart = fileParts.get(0); // Assume 1 ficheiro
-            // Truque para sacar o nome do ficheiro (Ficha 9 tem exemplos disto)
+            // Truque para sacar o nome do ficheiro (Ficha 9)
             fileName = getFileName(filePart.getHeaders());
             fileContent = filePart.getBody(InputStream.class, null);
         }
-        publicationBean.create(title, scientificArea, authors, type, username, tags, fileName, fileContent);
+        publicationBean.create(title, scientificArea, authors, type, uploaderUsername, tags, fileName, fileContent);
 
         return Response.status(Response.Status.CREATED).build();
     }

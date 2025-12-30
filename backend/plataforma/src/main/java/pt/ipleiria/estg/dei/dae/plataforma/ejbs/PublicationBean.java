@@ -7,6 +7,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
+import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,7 +33,10 @@ public class PublicationBean {
     //TODO: throw exception
     public void create(String title, String scientificArea, List<String> authors, String type, String uploaderUsername, List<String> tagNames, String filename, InputStream stream) throws IOException {
         //Validar Uploader
-        var user = userBean.find(uploaderUsername);
+        User uploader = userBean.find(uploaderUsername);
+        if(uploader == null){
+            throw new IllegalArgumentException("User not found");
+        }
 
         //Tratar do file
         //Criar folder se não existir
@@ -54,7 +58,7 @@ public class PublicationBean {
         publication.setType(type);
         publication.setScientificArea(scientificArea);
         publication.setAuthors(authors);
-        publication.setUploader(user);
+        publication.setUploader(uploader);
         publication.setPublicationDate(LocalDate.now());
 
         // Metadados do Ficheiro

@@ -11,9 +11,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "users", uniqueConstraints = { @UniqueConstraint(columnNames = "email") })
-@NamedQueries({
-        @NamedQuery(name = "getAllUsers", query = "SELECT u FROM User u ORDER BY u.username ASC")
-})
+//@NamedQueries({
+//        @NamedQuery(name = "getAllUsers", query = "SELECT u FROM User u ORDER BY u.username ASC")
+//})
 public class User extends Versionable implements Serializable {
 
     @Version
