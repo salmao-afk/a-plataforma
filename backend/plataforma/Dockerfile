@@ -8,7 +8,7 @@ ENV DEPLOYMENTS_DIR=${WILDFLY_HOME}/standalone/deployments
 
 WORKDIR $WILDFLY_HOME
 
-# Sets Administrator Password
+# Sets Administrator's Password
 RUN bin/add-user.sh admin $WILDFLY_ADMIN_PASSWORD --silent
 
 # Downloads the script that starts the wildfly server
