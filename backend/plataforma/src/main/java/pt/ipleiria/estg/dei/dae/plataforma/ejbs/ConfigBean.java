@@ -12,6 +12,9 @@ public class ConfigBean {
     @EJB
     private UserBean userBean;
 
+    @EJB
+    private PublicationBean publicationBean;
+
     @PostConstruct
     public void populateDB() {
         try {
@@ -23,7 +26,13 @@ public class ConfigBean {
                     "admin@ipleiria.pt",
                     UserRole.ADMINISTRATOR
             );
-
+            userBean.create(
+                    "user1",
+                    "123", // Será feito hash dentro do create
+                    "Colaborador",
+                    "user1@ipleiria.pt",
+                    UserRole.COLLABORATOR
+            );
             // Criar outros users de teste para a defesa
             // ...
 
