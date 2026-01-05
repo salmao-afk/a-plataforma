@@ -8,6 +8,7 @@ import jakarta.persistence.PersistenceContext;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
+import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -92,5 +93,18 @@ public class PublicationBean {
 
     public List<Publication> findAll(){
         return em.createNamedQuery("getAllPublications", Publication.class).getResultList();
+    }
+
+
+    public Publication find(long id) {
+        return em.find(Publication.class, id);
+    }
+
+    public Publication findOrFail(long id) throws MyEntityNotFoundException {
+        Publication pub = find(id);
+        if (pub == null) {
+            throw new MyEntityNotFoundException("Publicação com ID " + id + " não encontrada.");
+        }
+        return pub;
     }
 }
