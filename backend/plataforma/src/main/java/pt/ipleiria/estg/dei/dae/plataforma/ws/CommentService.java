@@ -16,9 +16,10 @@ import pt.ipleiria.estg.dei.dae.plataforma.security.Authenticated;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-@Path("/publicacoes/{id}/comentarios")
+@Path("/publicacoes/{pubId}/comentarios")
 @Authenticated
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -31,7 +32,7 @@ public class CommentService {
 
     @POST
     @RolesAllowed("COLLABORATOR")
-    public Response createComment(@PathParam("id") long publicationId, @Valid CommentDTO request) throws MyEntityNotFoundException{
+    public Response createComment(@PathParam("pubId") long publicationId, @Valid CommentDTO request) throws MyEntityNotFoundException{
         // Obter o utilizador autenticado pelo Security Context
         String username = securityContext.getUserPrincipal().getName();
 
@@ -55,4 +56,24 @@ public class CommentService {
         return Response.ok(response).build();
     }
 
+    @Path("/{commentId}")
+    @DELETE
+    public Response deleteComment(@PathParam("commentId") long commentId) throws MyEntityNotFoundException{
+        String username = securityContext.getUserPrincipal().getName();
+        commentBean.deleteComment(commentId, username);
+        Map<String, String> response = new HashMap<>();
+        response.put("mensagem", "Comentário apagado com sucesso");
+
+        return Response.ok(response).build();
+    }
+
+    @GET
+    public Response getComments(@PathParam("pubId") long pubId) throws MyEntityNotFoundException{
+        List<Comment> commentsList = commentBean.getComments(pubId);
+
+        //Converte para DTOs
+        List<CommentDTO> commentsDtos = CommentDTO.from(commentsList);
+
+        return Response.ok(commentsDtos).build();
+    }
 }

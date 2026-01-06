@@ -46,7 +46,7 @@ public class CommentBean {
         //Validar se a publi existe antes
         Publication publication = publicationBean.findOrFail(publicationId);
 
-        return em.createNamedQuery("getAllCommentsFromPublication", Comment.class)
+        return em.createNamedQuery("getVisibleCommentsFromPublication", Comment.class)
                 .setParameter("pubId", publicationId)
                 .getResultList();
     }
@@ -74,6 +74,16 @@ public class CommentBean {
         em.merge(comment);
     }
 
+    public void deleteComment(long commentId, String username) throws MyEntityNotFoundException {
+        Comment comment = findOrFail(commentId);
+        if(!comment.getAuthor().getUsername().equals(username)){
+            throw new IllegalArgumentException("Impossível apagar um comentário de outro utilizador!");
+        }
+        if(comment.isHidden()){
+            throw new IllegalArgumentException("Impossível apagar um comentário ocultado!");
+        }
+        em.remove(comment);
+    }
     public Comment findOrFail(long commentId) throws MyEntityNotFoundException {
         Comment comment = em.find(Comment.class, commentId);
         if (comment == null) {
@@ -81,4 +91,6 @@ public class CommentBean {
         }
         return comment;
     }
+
+
 }
