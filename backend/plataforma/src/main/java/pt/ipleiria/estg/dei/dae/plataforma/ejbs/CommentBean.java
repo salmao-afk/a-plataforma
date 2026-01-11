@@ -1,5 +1,6 @@
 package pt.ipleiria.estg.dei.dae.plataforma.ejbs;
 
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
@@ -40,12 +41,56 @@ public class CommentBean {
         return comment;
     }
 
+
     public List<Comment> getComments(long publicationId) throws MyEntityNotFoundException {
         //Validar se a publi existe antes
         Publication publication = publicationBean.findOrFail(publicationId);
 
-        return em.createNamedQuery("getAllCommentsFromPublication", Comment.class)
+        return em.createNamedQuery("getVisibleCommentsFromPublication", Comment.class)
                 .setParameter("pubId", publicationId)
                 .getResultList();
     }
+
+    public void toggleVisibility(long commentId, String adminUsername, boolean hidden, String motive) throws MyEntityNotFoundException {
+        Comment comment = findOrFail(commentId);
+        User responsibleUser = userBean.findOrFail(adminUsername);
+        if(hidden){
+            if(motive == null|| motive.isEmpty()){
+                throw new IllegalArgumentException("Para ocultar comentário é necessário indicar o motivo!");
+            }
+            if(comment.isHidden()){
+                throw new IllegalArgumentException("Comentário já está oculto!");
+            }
+            comment.setHidden(hidden);
+            comment.setHideReason(motive);
+            comment.setHiddenBy(responsibleUser);
+        } else {
+            //se o for para deixar o comentário visível,
+            // vai tirar a antiga razão de ocultação e o admin que o ocultou
+            comment.setHidden(hidden);
+            comment.setHideReason(null);
+            comment.setHiddenBy(null);
+        }
+        em.merge(comment);
+    }
+
+    public void deleteComment(long commentId, String username) throws MyEntityNotFoundException {
+        Comment comment = findOrFail(commentId);
+        if(!comment.getAuthor().getUsername().equals(username)){
+            throw new IllegalArgumentException("Impossível apagar um comentário de outro utilizador!");
+        }
+        if(comment.isHidden()){
+            throw new IllegalArgumentException("Impossível apagar um comentário ocultado!");
+        }
+        em.remove(comment);
+    }
+    public Comment findOrFail(long commentId) throws MyEntityNotFoundException {
+        Comment comment = em.find(Comment.class, commentId);
+        if (comment == null) {
+            throw new MyEntityNotFoundException("Comentário com id " + commentId + " não encontrado.");
+        }
+        return comment;
+    }
+
+
 }

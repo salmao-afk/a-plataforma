@@ -36,6 +36,7 @@ public class ConfigBean {
             // Criar outros users de teste para a defesa
             // ...
 
+
         } catch (Exception e) {
             // Ignora erro se já existirem (para não dar erro ao reiniciar o Docker)
         }

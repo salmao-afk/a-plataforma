@@ -12,8 +12,17 @@ import java.time.LocalDateTime;
 @Table(name = "comments")
 @NamedQueries({
         @NamedQuery(name = "getAllCommentsFromPublication",
-                query = "SELECT c FROM Comment c " +
-                        "WHERE c.publication.id = :pubId ORDER BY c.postedAt DESC")
+                query = "SELECT c " +
+                        "FROM Comment c " +
+                        "WHERE c.publication.id = :pubId " +
+                        "ORDER BY c.postedAt DESC"),
+
+        @NamedQuery(name = "getVisibleCommentsFromPublication",
+                query = "SELECT c " +
+                        "FROM Comment c " +
+                        "WHERE c.publication.id = :pubId " +
+                        "AND c.hidden = FALSE " +
+                        "ORDER BY c.postedAt DESC")
 })
 public class Comment extends Versionable implements Serializable {
     @Id
