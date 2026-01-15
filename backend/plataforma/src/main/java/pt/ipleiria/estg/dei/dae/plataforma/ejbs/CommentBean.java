@@ -51,6 +51,13 @@ public class CommentBean {
                 .getResultList();
     }
 
+    public List<Comment> getUserComments(String username) throws MyEntityNotFoundException {
+        User user = userBean.findOrFail(username);
+
+        return em.createNamedQuery("getUserComments", Comment.class)
+                .setParameter("username", user.getUsername())
+                .getResultList();
+    }
     public void toggleVisibility(long commentId, String adminUsername, boolean hidden, String motive) throws MyEntityNotFoundException {
         Comment comment = findOrFail(commentId);
         User responsibleUser = userBean.findOrFail(adminUsername);
@@ -66,7 +73,7 @@ public class CommentBean {
             comment.setHiddenBy(responsibleUser);
         } else {
             //se o for para deixar o comentário visível,
-            // vai tirar a antiga razão de ocultação e o admin que o ocultou
+            //tira as infos da ultima ocultação
             comment.setHidden(hidden);
             comment.setHideReason(null);
             comment.setHiddenBy(null);
