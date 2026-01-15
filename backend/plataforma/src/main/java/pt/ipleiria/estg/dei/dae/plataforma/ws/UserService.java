@@ -18,7 +18,9 @@ import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityExistsException;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 import pt.ipleiria.estg.dei.dae.plataforma.security.Authenticated;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Path("utilizadores") // ou "users"
 @Produces(MediaType.APPLICATION_JSON)
@@ -79,6 +81,42 @@ public class UserService {
         return Response.status(Response.Status.FORBIDDEN).build();
     }
 
+    //atualizar users
+    @PUT
+    @Path("/{username}")
+
+    public Response updateUser(@PathParam("username") String username, UserDTO dto) throws MyEntityNotFoundException {
+        if(dto.getEmail() == null || dto.getName() == null){
+            throw new IllegalArgumentException("Necessita de alterar algum campo(email ou nome)!");
+        }
+        userBean.update(username, dto.getEmail(), dto.getName());
+        User user = userBean.find(username);
+        return Response.ok(UserDTO.fromUser(user)).build();
+    }
+
+    //apagar users
+    @DELETE
+    @Path("/{username}")
+    public Response deleteUser(@PathParam("username") String username) throws MyEntityNotFoundException {
+        userBean.delete(username);
+        Map<String, String> response = new HashMap<>();
+        response.put("mensagem", "Utilizador removido com sucesso.");
+
+        return Response.ok(response).build();
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+    //-----------------------------Comentarios-----------------------------
     //obter comentarios de um determinado user
     @GET
     @Path("/{username}/comentarios")

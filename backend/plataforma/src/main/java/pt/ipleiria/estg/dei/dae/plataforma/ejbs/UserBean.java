@@ -5,6 +5,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.validation.ConstraintViolationException;
 import org.hibernate.Hibernate;
+import pt.ipleiria.estg.dei.dae.plataforma.entities.Comment;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.UserRole;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
@@ -41,8 +42,36 @@ public class UserBean {
 
     }
 
-    // No UserBean.java
+    //permite atualizar o name e o email
+    public void update(String username,String newEmail, String newName) throws MyEntityNotFoundException{
+        User user = findOrFail(username);
+        if(newEmail != null && !newEmail.equals(user.getEmail())) {
+            User ownerOfEmail = em.createNamedQuery("findByEmail", User.class)
+                                    .setParameter("email", newEmail)
+                                    .getResultStream()
+                                    .findFirst()
+                                    .orElse(null);
+            if (ownerOfEmail != null) {
+                throw new IllegalArgumentException("O email " + newEmail + " já está a ser utilizado por outro utilizador.");
+            }
+            user.setEmail(newEmail);
+        }
+        user.setName(newName);
+    }
 
+    //apagar um user
+    public void delete(String username) throws MyEntityNotFoundException {
+        User user = findOrFail(username);
+
+        em.createQuery("DELETE FROM Comment c WHERE c.author.username = :username")
+                .setParameter("username", username)
+                .executeUpdate();
+
+        em.createQuery("UPDATE Comment c SET c.hiddenBy = NULL WHERE c.hiddenBy.username = :username")
+                .setParameter("username", username)
+                .executeUpdate();
+        em.remove(user);
+    }
 
     public User find(String username) {
         User user = em.find(User.class, username);

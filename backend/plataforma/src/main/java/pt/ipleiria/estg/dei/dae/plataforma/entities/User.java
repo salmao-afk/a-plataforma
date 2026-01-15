@@ -14,6 +14,7 @@ import java.util.List;
 //@NamedQueries({
 //        @NamedQuery(name = "getAllUsers", query = "SELECT u FROM User u ORDER BY u.username ASC")
 //})
+@NamedQuery(name = "findByEmail", query = "SELECT u FROM User u WHERE u.email = :email")
 public class User extends Versionable implements Serializable {
 
     @Version
@@ -47,7 +48,7 @@ public class User extends Versionable implements Serializable {
             inverseJoinColumns = @JoinColumn(name = "tag_id"))
     private List<Tag> subscribedTags = new ArrayList<>();
 
-    @OneToMany(mappedBy = "uploader")
+    @OneToMany(mappedBy = "uploader", cascade = CascadeType.REMOVE)
     private List<Publication> myPublications = new ArrayList<>();
 
     public User(int version, String username, String password, String email, String name, UserRole role, boolean active) {

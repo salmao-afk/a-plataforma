@@ -1,5 +1,6 @@
 package pt.ipleiria.estg.dei.dae.plataforma.dtos;
 
+import jakarta.validation.constraints.Email;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.UserRole;
