@@ -22,6 +22,12 @@ import java.time.LocalDateTime;
                         "FROM Comment c " +
                         "WHERE c.publication.id = :pubId " +
                         "AND c.hidden = FALSE " +
+                        "ORDER BY c.postedAt DESC"),
+
+        @NamedQuery(name = "getUserComments",
+                query = "SELECT c " +
+                        "FROM Comment c " +
+                        "WHERE c.author.username = :username " +
                         "ORDER BY c.postedAt DESC")
 })
 public class Comment extends Versionable implements Serializable {

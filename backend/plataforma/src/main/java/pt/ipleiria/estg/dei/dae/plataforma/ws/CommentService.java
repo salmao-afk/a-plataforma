@@ -9,6 +9,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.CommentDTO;
+import pt.ipleiria.estg.dei.dae.plataforma.dtos.CommentUserDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.CommentVisibilityDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.CommentBean;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Comment;
@@ -37,13 +38,20 @@ public class CommentService {
         String username = securityContext.getUserPrincipal().getName();
 
         Comment newComment = commentBean.create(publicationId,username,request.getContent());
+        CommentDTO createdCommentDTO = CommentDTO.from(newComment);
+
+        // Estrutura de resposta com o comentário e a mensagem
+        Map<String, Object> response = new HashMap<>();
+        response.put("comentario", createdCommentDTO);
+        response.put("mensagem", "Comentário adicionado com sucesso. Notificações enviadas aos subscritores.");
+
         return Response.status(Response.Status.CREATED)
-                .entity(CommentDTO.from(newComment))
+                .entity(response)
                 .build();
     }
 
 
-    @Path("/{commentId}/visibility")
+    @Path("/{commentId}/visibilidade")
     @PUT
     @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
     public Response toggleVisibility( @PathParam("commentId") long commentId, @Valid CommentVisibilityDTO request) throws MyEntityNotFoundException{
@@ -72,8 +80,10 @@ public class CommentService {
         List<Comment> commentsList = commentBean.getComments(pubId);
 
         //Converte para DTOs
-        List<CommentDTO> commentsDtos = CommentDTO.from(commentsList);
+        List<CommentUserDTO> commentsDtos = CommentUserDTO.from(commentsList);
 
         return Response.ok(commentsDtos).build();
     }
+
+
 }

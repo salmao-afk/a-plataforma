@@ -7,8 +7,12 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
+import pt.ipleiria.estg.dei.dae.plataforma.dtos.CommentDTO;
+import pt.ipleiria.estg.dei.dae.plataforma.dtos.CommentUserDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.UserDTO;
+import pt.ipleiria.estg.dei.dae.plataforma.ejbs.CommentBean;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.UserBean;
+import pt.ipleiria.estg.dei.dae.plataforma.entities.Comment;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityExistsException;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
@@ -27,6 +31,9 @@ public class UserService {
 
     @Context
     private SecurityContext securityContext;
+
+    @EJB
+    private CommentBean commentBean;
 
     //Criar utilizador
     @POST
@@ -70,5 +77,30 @@ public class UserService {
             return Response.ok(UserDTO.fromUser(user)).build();
         }
         return Response.status(Response.Status.FORBIDDEN).build();
+    }
+
+    //obter comentarios de um determinado user
+    @GET
+    @Path("/{username}/comentarios")
+    @RolesAllowed({"ADMINISTRATOR"})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getUserComments(@PathParam("username") String username) throws MyEntityNotFoundException{
+
+        List<Comment> commentList = commentBean.getUserComments(username);
+        List<CommentUserDTO> commentsDtos = CommentUserDTO.from(commentList);
+
+        return Response.ok(commentsDtos).build();
+    }
+
+    //obter comentarios do user que esta a fazer o pedido
+    @Path("/me/comentarios")
+    @GET
+    @RolesAllowed({"COLLABORATOR"})
+    public Response getMyComments() throws MyEntityNotFoundException{
+        //vai buscar o username do utilizador que faz o pedido
+        String username = securityContext.getUserPrincipal().getName();
+        List<Comment> commentList = commentBean.getUserComments(username);
+        List<CommentUserDTO> commentsDtos = CommentUserDTO.from(commentList);
+        return Response.ok(commentsDtos).build();
     }
 }
