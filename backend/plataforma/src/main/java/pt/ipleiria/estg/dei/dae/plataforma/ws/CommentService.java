@@ -33,11 +33,11 @@ public class CommentService {
 
     @POST
     @RolesAllowed("COLLABORATOR")
-    public Response createComment(@PathParam("pubId") long publicationId, @Valid CommentDTO request) throws MyEntityNotFoundException{
+    public Response createComment(@PathParam("pubId") long publicationId, @Valid CommentDTO dto) throws MyEntityNotFoundException{
         // Obter o utilizador autenticado pelo Security Context
         String username = securityContext.getUserPrincipal().getName();
 
-        Comment newComment = commentBean.create(publicationId,username,request.getContent());
+        Comment newComment = commentBean.create(publicationId,username,dto.getContent());
         CommentDTO createdCommentDTO = CommentDTO.from(newComment);
 
         // Estrutura de resposta com o comentário e a mensagem
@@ -54,12 +54,12 @@ public class CommentService {
     @Path("/{commentId}/visibilidade")
     @PUT
     @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
-    public Response toggleVisibility( @PathParam("commentId") long commentId, @Valid CommentVisibilityDTO request) throws MyEntityNotFoundException{
+    public Response toggleVisibility( @PathParam("commentId") long commentId, @Valid CommentVisibilityDTO dto) throws MyEntityNotFoundException{
         String username = securityContext.getUserPrincipal().getName();
 
-        commentBean.toggleVisibility(commentId, username, request.isHidden(), request.getHideReason());
+        commentBean.toggleVisibility(commentId, username, dto.isHidden(), dto.getHideReason());
         Map<String, String> response = new HashMap<>();
-        response.put("mensagem", "Comentário " + (request.isHidden() ? "ocultado" : "mostrado") + " com sucesso");
+        response.put("mensagem", "Comentário " + (dto.isHidden() ? "ocultado" : "mostrado") + " com sucesso");
 
         return Response.ok(response).build();
     }

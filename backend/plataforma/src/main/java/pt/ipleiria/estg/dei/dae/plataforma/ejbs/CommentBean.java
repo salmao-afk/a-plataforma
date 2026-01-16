@@ -58,6 +58,7 @@ public class CommentBean {
                 .setParameter("username", user.getUsername())
                 .getResultList();
     }
+
     public void toggleVisibility(long commentId, String adminUsername, boolean hidden, String motive) throws MyEntityNotFoundException {
         Comment comment = findOrFail(commentId);
         User responsibleUser = userBean.findOrFail(adminUsername);

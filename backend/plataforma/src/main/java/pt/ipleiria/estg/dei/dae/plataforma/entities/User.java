@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Entity
@@ -14,6 +15,7 @@ import java.util.List;
 //@NamedQueries({
 //        @NamedQuery(name = "getAllUsers", query = "SELECT u FROM User u ORDER BY u.username ASC")
 //})
+@NamedQuery(name = "findByEmail", query = "SELECT u FROM User u WHERE u.email = :email")
 public class User extends Versionable implements Serializable {
 
     @Version
@@ -39,18 +41,21 @@ public class User extends Versionable implements Serializable {
     private UserRole role;
 
     @NotNull
-    private boolean active = true;
+    private Boolean active = true;
 
+    private String statusReason;
+
+    
     @ManyToMany
     @JoinTable(name = "users_subscriptions",
             joinColumns = @JoinColumn(name = "username"),
             inverseJoinColumns = @JoinColumn(name = "tag_id"))
     private List<Tag> subscribedTags = new ArrayList<>();
 
-    @OneToMany(mappedBy = "uploader")
+    @OneToMany(mappedBy = "uploader", cascade = CascadeType.REMOVE)
     private List<Publication> myPublications = new ArrayList<>();
 
-    public User(int version, String username, String password, String email, String name, UserRole role, boolean active) {
+    public User(int version, String username, String password, String email, String name, UserRole role, Boolean active, String statusReason) {
         this.version = version;
         this.username = username;
         this.password = password;
@@ -58,6 +63,7 @@ public class User extends Versionable implements Serializable {
         this.name = name;
         this.role = role;
         this.active = active;
+        this.statusReason = statusReason;
     }
 
     public User() {
@@ -111,11 +117,11 @@ public class User extends Versionable implements Serializable {
         this.role = role;
     }
 
-    public boolean isActive() {
+    public Boolean isActive() {
         return active;
     }
 
-    public void setActive(boolean active) {
+    public void setActive(Boolean active) {
         this.active = active;
     }
 
@@ -141,5 +147,12 @@ public class User extends Versionable implements Serializable {
 
     public void setMyPublications(List<Publication> myPublications) {
         this.myPublications = myPublications;
+    }
+
+    public String getStatusReason() {
+        return statusReason;
+    }
+    public void setStatusReason(String statusReason) {
+        this.statusReason = statusReason;
     }
 }

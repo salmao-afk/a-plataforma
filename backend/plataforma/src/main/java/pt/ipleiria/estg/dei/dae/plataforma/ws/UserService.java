@@ -2,23 +2,26 @@ package pt.ipleiria.estg.dei.dae.plataforma.ws;
 
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.ejb.EJB;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.CommentDTO;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.CommentUserDTO;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.UserDTO;
+import pt.ipleiria.estg.dei.dae.plataforma.dtos.*;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.CommentBean;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.UserBean;
+import pt.ipleiria.estg.dei.dae.plataforma.ejbs.PublicationBean;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Comment;
+import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityExistsException;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 import pt.ipleiria.estg.dei.dae.plataforma.security.Authenticated;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Path("utilizadores") // ou "users"
 @Produces(MediaType.APPLICATION_JSON)
@@ -34,6 +37,11 @@ public class UserService {
 
     @EJB
     private CommentBean commentBean;
+
+    @EJB
+    private PublicationBean publicationBean;
+
+
 
     //Criar utilizador
     @POST
@@ -79,6 +87,67 @@ public class UserService {
         return Response.status(Response.Status.FORBIDDEN).build();
     }
 
+    //atualizar users
+    @PUT
+    @Path("/{username}")
+
+    public Response updateUser(@PathParam("username") String username, UserDTO dto) throws MyEntityNotFoundException {
+        if(dto.getEmail() == null || dto.getName() == null){
+            throw new IllegalArgumentException("Necessita de alterar algum campo(email ou nome)!");
+        }
+        userBean.update(username, dto.getEmail(), dto.getName());
+        User user = userBean.find(username);
+        return Response.ok(UserDTO.fromUser(user)).build();
+    }
+
+    //apagar users
+    @DELETE
+    @Path("/{username}")
+    public Response deleteUser(@PathParam("username") String username) throws MyEntityNotFoundException {
+        userBean.delete(username);
+        Map<String, String> response = new HashMap<>();
+        response.put("mensagem", "Utilizador removido com sucesso.");
+
+        return Response.ok(response).build();
+    }
+
+
+    //suspender user
+    @PATCH
+    @Path("/{username}/estado")
+    @RolesAllowed({"ADMINISTRATOR"})
+    public Response suspendUser(@PathParam("username") String username,@Valid UserStatusDTO dto) throws MyEntityNotFoundException {
+        if(dto.isActive()){
+            userBean.activate(username);
+        }
+        else {
+            userBean.suspend(username, dto.getStatusReason());
+        }
+        Map<String, String> response = new HashMap<>();
+        response.put("mensagem", "User " + (dto.isActive() ? "ativado" : "suspenso") + " com sucesso");
+        return Response.ok(response).build();
+    }
+
+
+    //mudar role de user
+    @PATCH
+    @Path("/{username}/role")
+    @RolesAllowed({"ADMINISTRATOR"})
+    public Response changeUserRole(@PathParam("username") String username,@Valid UserRoleDTO dto) throws MyEntityNotFoundException {
+        userBean.changeRole(username, dto.getRole());
+        Map<String, String> response = new HashMap<>();
+        response.put("mensagem", "Role do utilizador alterado com sucesso");
+        return Response.ok(response).build();
+    }
+
+
+
+
+
+
+
+
+    //-----------------------------Comentarios-----------------------------
     //obter comentarios de um determinado user
     @GET
     @Path("/{username}/comentarios")
