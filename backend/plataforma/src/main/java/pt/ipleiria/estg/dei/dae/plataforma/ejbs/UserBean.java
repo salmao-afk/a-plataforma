@@ -73,6 +73,44 @@ public class UserBean {
         em.remove(user);
     }
 
+    //suspender um user
+    public void suspend(String username, String motive) throws MyEntityNotFoundException {
+        if(motive == null || motive.isEmpty()){
+            throw new IllegalArgumentException("Precisa de dar um motivo para suspender o utilizador!");
+        }
+        User user = findOrFail(username);
+        if(!user.isActive()){
+            throw new IllegalArgumentException("Utilizador já se encontra inativo");
+        }
+        user.setActive(false);
+        user.setStatusReason(motive);
+    }
+
+    //ativar um user
+    public void activate(String username) throws MyEntityNotFoundException {
+        User user = findOrFail(username);
+        if(user.isActive()){
+            throw new IllegalArgumentException("Utilizador já se encontra ativo");
+        }
+        user.setActive(true);
+        user.setStatusReason(" ");
+    }
+
+    //mudar a role de um user
+    public void changeRole(String username, UserRole newRole) throws MyEntityNotFoundException {
+        User user = findOrFail(username);
+        if(!user.isActive() || user.getRole() == UserRole.ADMINISTRATOR){
+            throw new IllegalArgumentException("Utilizador tem de estar ativo e não pode ser Administrador");
+        }
+        user.setRole(newRole);
+
+    }
+
+
+
+
+
+
     public User find(String username) {
         User user = em.find(User.class, username);
         if (user != null) {

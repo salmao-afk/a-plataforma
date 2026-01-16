@@ -2,17 +2,18 @@ package pt.ipleiria.estg.dei.dae.plataforma.ws;
 
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.ejb.EJB;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.CommentDTO;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.CommentUserDTO;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.UserDTO;
+import pt.ipleiria.estg.dei.dae.plataforma.dtos.*;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.CommentBean;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.UserBean;
+import pt.ipleiria.estg.dei.dae.plataforma.ejbs.PublicationBean;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Comment;
+import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityExistsException;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
@@ -36,6 +37,11 @@ public class UserService {
 
     @EJB
     private CommentBean commentBean;
+
+    @EJB
+    private PublicationBean publicationBean;
+
+
 
     //Criar utilizador
     @POST
@@ -106,8 +112,33 @@ public class UserService {
     }
 
 
+    //suspender user
+    @PATCH
+    @Path("/{username}/estado")
+    @RolesAllowed({"ADMINISTRATOR"})
+    public Response suspendUser(@PathParam("username") String username,@Valid UserStatusDTO dto) throws MyEntityNotFoundException {
+        if(dto.isActive()){
+            userBean.activate(username);
+        }
+        else {
+            userBean.suspend(username, dto.getStatusReason());
+        }
+        Map<String, String> response = new HashMap<>();
+        response.put("mensagem", "User " + (dto.isActive() ? "ativado" : "suspenso") + " com sucesso");
+        return Response.ok(response).build();
+    }
 
 
+    //mudar role de user
+    @PATCH
+    @Path("/{username}/role")
+    @RolesAllowed({"ADMINISTRATOR"})
+    public Response changeUserRole(@PathParam("username") String username,@Valid UserRoleDTO dto) throws MyEntityNotFoundException {
+        userBean.changeRole(username, dto.getRole());
+        Map<String, String> response = new HashMap<>();
+        response.put("mensagem", "Role do utilizador alterado com sucesso");
+        return Response.ok(response).build();
+    }
 
 
 
