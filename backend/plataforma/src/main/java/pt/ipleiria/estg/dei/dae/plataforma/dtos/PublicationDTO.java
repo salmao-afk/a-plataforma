@@ -6,6 +6,7 @@ import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -78,6 +79,11 @@ public class PublicationDTO implements Serializable {
 
     // Converte de Entidade para DTO
     public static PublicationDTO from(Publication publication) {
+        String dataFormatada = null;
+        if (publication.getPublicationDate() != null) {
+           DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            dataFormatada = publication.getPublicationDate().format(formatter);
+        }
         return new PublicationDTO(
                 publication.getId(),
                 publication.getTitle(),

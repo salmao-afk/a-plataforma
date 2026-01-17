@@ -14,7 +14,12 @@ import java.util.List;
 @Entity
 @Table(name = "publications")
 @NamedQueries({
-        @NamedQuery(name = "getAllPublications", query = "SELECT p FROM Publication p ORDER BY p.publicationDate DESC")
+        @NamedQuery(name = "getAllPublications", query = "SELECT p FROM Publication p ORDER BY p.publicationDate DESC"),
+        @NamedQuery(name = "Publication.findByUsername",
+        query = "SELECT p " +
+                "FROM Publication p " +
+                "LEFT JOIN FETCH p.tags " + // <--- A CURA DO PROBLEMA
+                "WHERE p.uploader.username = :username")
 })
 public class Publication extends Versionable implements Serializable {
 
