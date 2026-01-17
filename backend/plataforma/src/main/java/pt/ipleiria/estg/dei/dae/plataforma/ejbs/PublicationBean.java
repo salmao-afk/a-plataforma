@@ -91,6 +91,13 @@ public class PublicationBean {
         em.persist(publication);
     }
 
+    public List<Publication> getUserPublications(String username) throws MyEntityNotFoundException {
+        User user = userBean.findOrFail(username);
+        return em.createNamedQuery("Publication.findByUsername", Publication.class)
+                .setParameter("username", username)
+                .getResultList();
+    }
+
     public List<Publication> findAll(){
         return em.createNamedQuery("getAllPublications", Publication.class).getResultList();
     }

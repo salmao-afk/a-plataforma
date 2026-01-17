@@ -5,6 +5,7 @@ import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -18,12 +19,12 @@ public class PublicationDTO implements Serializable {
     private String uploaderUsername;
     private List<String> tags = new ArrayList<>();
     private List<String> authors = new ArrayList<>();
-    private LocalDate uploadDate;
+    private String uploadDate;
 
     public PublicationDTO() {
     }
 
-    public PublicationDTO(long id, String title, String scientificArea, List<String> authors, String type, String uploaderUsername, List<String> tags, LocalDate uploadDate) {
+    public PublicationDTO(long id, String title, String scientificArea, List<String> authors, String type, String uploaderUsername, List<String> tags, String uploadDate) {
         this.id = id;
         this.title = title;
         this.scientificArea = scientificArea;
@@ -55,11 +56,11 @@ public class PublicationDTO implements Serializable {
     public List<String> getTags() { return tags; }
     public void setTags(List<String> tags) { this.tags = tags; }
 
-    public LocalDate getUploadDate() {
+    public String getUploadDate() {
         return uploadDate;
     }
 
-    public void setUploadDate(LocalDate uploadDate) {
+    public void setUploadDate(String uploadDate) {
         this.uploadDate = uploadDate;
     }
 
@@ -67,6 +68,11 @@ public class PublicationDTO implements Serializable {
 
     // Converte de Entidade para DTO
     public static PublicationDTO from(Publication publication) {
+        String dataFormatada = null;
+        if (publication.getPublicationDate() != null) {
+           DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            dataFormatada = publication.getPublicationDate().format(formatter);
+        }
         return new PublicationDTO(
                 publication.getId(),
                 publication.getTitle(),
@@ -77,7 +83,7 @@ public class PublicationDTO implements Serializable {
                 publication.getTags() != null ?
                         publication.getTags().stream().map(Tag::getName).collect(Collectors.toList()) :
                         new ArrayList<>(),
-                publication.getPublicationDate()
+                dataFormatada
         );
     }
 

@@ -141,10 +141,17 @@ public class UserService {
     }
 
 
+    //-----------------------------Publicações-----------------------------
 
-
-
-
+    //obter publi de um user especifico
+    @GET
+    @Path("/{username}/publicacoes")
+    @RolesAllowed({"ADMINISTRATOR"})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getUserPublications(@PathParam("username") String username) throws MyEntityNotFoundException{
+        List<Publication> publications = publicationBean.getUserPublications(username);
+        return Response.ok(PublicationDTO.from(publications)).build();
+    }
 
 
     //-----------------------------Comentarios-----------------------------
