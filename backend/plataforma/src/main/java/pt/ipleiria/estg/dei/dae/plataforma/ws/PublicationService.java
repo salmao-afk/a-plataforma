@@ -9,14 +9,19 @@ import jakarta.ws.rs.core.SecurityContext;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.PublicationDTO;
+import pt.ipleiria.estg.dei.dae.plataforma.dtos.PublicationHistoryDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.PublicationBean;
+import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
+import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 import pt.ipleiria.estg.dei.dae.plataforma.security.Authenticated;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Path("/publicacoes")
 @Authenticated
@@ -35,6 +40,24 @@ public class PublicationService {
         return PublicationDTO.from(publicationBean.findAll());
     }
 
+
+    @GET
+    @Path("/me")
+    @Authenticated
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<PublicationDTO> getMyPublications() {
+        return PublicationDTO.from(publicationBean.findUserPublications(securityContext.getUserPrincipal().getName()));
+    }
+
+    @GET
+    @Path("/{id}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getPublication(@PathParam("id") long id) throws MyEntityNotFoundException {
+        Publication publication = publicationBean.findOrFail(id);
+        PublicationDTO dto = PublicationDTO.from(publication);
+        return Response.ok(dto).build();
+    }
+
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     public Response createPublication(MultipartFormDataInput input) throws IOException {
@@ -48,6 +71,7 @@ public class PublicationService {
         String title = getTextValue(uploadForm, "title");
         String type = getTextValue(uploadForm, "type");
         String scientificArea = getTextValue(uploadForm, "scientificArea");
+        String description = getTextValue(uploadForm, "description");
 
         // Autores e Tags vêm como listas ou strings separadas.
         // Simplificação: vamos assumir que vêm separadas por vírgulas ou várias partes.
@@ -65,7 +89,7 @@ public class PublicationService {
             fileName = getFileName(filePart.getHeaders());
             fileContent = filePart.getBody(InputStream.class, null);
         }
-        publicationBean.create(title, scientificArea, authors, type, uploaderUsername, tags, fileName, fileContent);
+        publicationBean.create(title, scientificArea, description, authors, type, uploaderUsername, tags, fileName, fileContent);
 
         return Response.status(Response.Status.CREATED).build();
     }
@@ -108,5 +132,69 @@ public class PublicationService {
             }
         }
         return "unknown";
+    }
+
+    @GET
+    @Path("/{id}/download")
+    @Produces(MediaType.APPLICATION_OCTET_STREAM) // Indica que é um ficheiro binário
+    public Response downloadFile(@PathParam("id") long id) throws MyEntityNotFoundException {
+
+        // 1. Buscar a publicação para saber o nome original (ex: "relatorio.pdf")
+        Publication publication = publicationBean.findOrFail(id);
+
+        // 2. Buscar o ficheiro físico
+        File file = publicationBean.getFile(id);
+
+        // 3. Construir a resposta com o Header "Content-Disposition"
+        // Isto obriga o browser a abrir a janela de "Guardar como..." com o nome correto
+        return Response.ok(file)
+                .header("Content-Disposition", "attachment; filename=\"" + publication.getFilename() + "\"")
+                .build();
+    }
+
+    @DELETE
+    @Path("/{id}")
+    public Response deletePublication(@PathParam("id") long id) throws MyEntityNotFoundException {
+        //obter publicacao para obter uploader
+        var publication = publicationBean.findOrFail(id);
+
+        //obter user que fez o pedido
+        String username = securityContext.getUserPrincipal().getName();
+
+        //verificar permissao para apagar
+        if(!username.equals(publication.getUploader().getUsername()) && !securityContext.isUserInRole("ADMINISTRATOR")){
+            return Response.status(Response.Status.FORBIDDEN).entity("Não pode apagar esta publicação").build();
+        }
+
+        publicationBean.delete(id);
+        return Response.ok().build();
+    }
+
+    @PUT
+    @Path("/{id}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response updatePublication(@PathParam("id") long id, PublicationDTO dto) throws MyEntityNotFoundException{
+        Publication publication = publicationBean.findOrFail(id);
+        String username = securityContext.getUserPrincipal().getName();
+
+        if(!publication.getUploader().getUsername().equals(username) && !securityContext.isUserInRole("ADMINISTRATOR")){
+            return Response.status(Response.Status.FORBIDDEN).build();
+        }
+
+        publicationBean.update(id, dto, username);
+        return Response.ok().build();
+    }
+
+    @GET
+    @Path("/{id}/historico")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getPublicationHistory(@PathParam("id") long id) throws MyEntityNotFoundException {
+        var historyList = publicationBean.getHistory(id);
+
+        var dtos = historyList.stream()
+                .map(PublicationHistoryDTO::from)
+                .collect(Collectors.toList());
+
+        return Response.ok(dtos).build();
     }
 }

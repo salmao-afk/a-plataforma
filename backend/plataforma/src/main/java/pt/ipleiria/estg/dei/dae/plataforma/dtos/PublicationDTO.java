@@ -2,6 +2,7 @@ package pt.ipleiria.estg.dei.dae.plataforma.dtos;
 
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
+import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -11,6 +12,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
+
 public class PublicationDTO implements Serializable {
     private long id;
     private String title;
@@ -19,17 +21,19 @@ public class PublicationDTO implements Serializable {
     private String uploaderUsername;
     private List<String> tags = new ArrayList<>();
     private List<String> authors = new ArrayList<>();
+    private String description;
     private String uploadDate;
 
     public PublicationDTO() {
     }
 
-    public PublicationDTO(long id, String title, String scientificArea, List<String> authors, String type, String uploaderUsername, List<String> tags, String uploadDate) {
+    public PublicationDTO(long id, String title, String scientificArea, List<String> authors, String type, String description, String uploaderUsername, List<String> tags, String uploadDate) {
         this.id = id;
         this.title = title;
         this.scientificArea = scientificArea;
         this.authors = authors;
         this.type = type;
+        this.description = description;
         this.uploaderUsername = uploaderUsername;
         this.tags = tags;
         this.uploadDate = uploadDate;
@@ -64,6 +68,13 @@ public class PublicationDTO implements Serializable {
         this.uploadDate = uploadDate;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
     // --- Métodos de Conversão (Helpers) ---
 
     // Converte de Entidade para DTO
@@ -79,11 +90,11 @@ public class PublicationDTO implements Serializable {
                 publication.getScientificArea(),
                 publication.getAuthors(), //TODO: verificar se é null
                 publication.getType(),
+                publication.getDescription(),
                 publication.getUploader().getUsername(),
-                publication.getTags() != null ?
-                        publication.getTags().stream().map(Tag::getName).collect(Collectors.toList()) :
+                publication.getTags() != null ? publication.getTags().stream().map(Tag::getName).collect(Collectors.toList()) :
                         new ArrayList<>(),
-                dataFormatada
+                publication.getPublicationDate().toString()
         );
     }
 
