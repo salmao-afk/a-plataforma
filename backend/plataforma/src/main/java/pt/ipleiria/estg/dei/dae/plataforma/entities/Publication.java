@@ -31,7 +31,10 @@ public class Publication extends Versionable implements Serializable {
     @NotNull
     private LocalDate publicationDate;
 
+    @NotNull
     private String filename;
+
+    @NotNull
     private String filepath;
 
     // Relação: Quem fez o upload? (Muitas publicações, 1 User)
@@ -70,6 +73,9 @@ public class Publication extends Versionable implements Serializable {
 
     @OneToMany(mappedBy = "publication", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
     private List<CriticalAnalysis> criticalAnalyses = new ArrayList<>();
+
+    @OneToMany(mappedBy = "publication", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<PublicationHistory> history = new ArrayList<>();
 
     public Publication() {
     }
@@ -216,5 +222,13 @@ public class Publication extends Versionable implements Serializable {
 
     public void setCriticalAnalyses(List<CriticalAnalysis> criticalAnalyses) {
         this.criticalAnalyses = criticalAnalyses;
+    }
+
+    public List<PublicationHistory> getHistory() {
+        return history;
+    }
+
+    public void addHistory(PublicationHistory log) {
+        history.add(log);
     }
 }
