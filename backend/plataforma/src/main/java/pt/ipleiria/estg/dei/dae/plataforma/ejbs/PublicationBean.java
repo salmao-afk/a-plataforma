@@ -10,6 +10,7 @@ import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.PublicationHistory;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
+import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityExistsException;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 
 import java.io.File;
@@ -80,18 +81,21 @@ public class PublicationBean {
         //tags
         List<Tag> tags = new ArrayList<>();
         if(tagNames != null && !tagNames.isEmpty()){
-            for(String tagName : tagNames){
-                //encontrar a tag na base de dados através do nome
+            for (String tagName : tagNames) {
                 try {
-                    Tag tag = em.createQuery("SELECT t FROM Tag t WHERE t.name = :name", Tag.class)
+                    // Busca pelo atributo 'name', não pelo ID
+                    Tag tag = em.createQuery(
+                                    "SELECT t FROM Tag t WHERE t.name = :name", Tag.class)
                             .setParameter("name", tagName)
                             .getSingleResult();
-                    tags.add(tag);
-                } catch (Exception e) {
-                    // Se não encontra, CRIA NOVA (Melhor abordagem para MVP)
-                    Tag newTag = new Tag(tagName, "nova tag default");// Assume construtor Tag(String name)
+
+                    publication.getTags().add(tag);
+
+                } catch (IllegalArgumentException e) {
+                    // Se não existe, cria nova
+                    Tag newTag = new Tag(tagName, "Gerada automaticamente");
                     em.persist(newTag);
-                    tags.add(newTag);
+                    publication.getTags().add(newTag);
                 }
             }
         }
@@ -218,5 +222,35 @@ public class PublicationBean {
                         PublicationHistory.class)
                 .setParameter("id", id)
                 .getResultList();
+    }
+
+    public void addTag(long publicationId, String tagName) throws MyEntityNotFoundException, MyEntityExistsException{
+        Publication publication = findOrFail(publicationId);
+
+        Tag tag = em.find(Tag.class, tagName);
+        if(tag == null){
+            throw new MyEntityNotFoundException("Tag not found");
+        }
+
+        if(publication.getTags().contains(tag)){
+            throw new MyEntityExistsException("Tag already associated with publication");
+        }
+
+        publication.getTags().add(tag);
+    }
+
+    public void removeTag(long publicationId, String tagName) throws MyEntityNotFoundException{
+        Publication publication = findOrFail(publicationId);
+
+        Tag tag = em.find(Tag.class, tagName);
+        if(tag == null){
+            throw new MyEntityNotFoundException("Tag not found");
+        }
+
+        if(!publication.getTags().contains(tag)){
+            throw new IllegalArgumentException("Tag not associated with publication");
+        }
+
+        publication.getTags().remove(tag);
     }
 }

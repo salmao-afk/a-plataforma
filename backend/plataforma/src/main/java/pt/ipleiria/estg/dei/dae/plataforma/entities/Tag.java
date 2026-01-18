@@ -1,18 +1,25 @@
 package pt.ipleiria.estg.dei.dae.plataforma.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Table(name = "tags")
+@NamedQueries({
+        @NamedQuery(
+                name = "getAllTags",
+                query = "SELECT t FROM Tag t ORDER BY t.name ASC" // JPQL
+        )
+})
 public class Tag extends Versionable implements Serializable {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+
     private String name;
 
     @ManyToMany(mappedBy = "tags")
@@ -31,6 +38,14 @@ public class Tag extends Versionable implements Serializable {
     public Tag(String name, String description) {
         this.name = name;
         this.description = description;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
     }
 
     public String getName() {
@@ -79,5 +94,18 @@ public class Tag extends Versionable implements Serializable {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Tag tag = (Tag) o;
+        return id == tag.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

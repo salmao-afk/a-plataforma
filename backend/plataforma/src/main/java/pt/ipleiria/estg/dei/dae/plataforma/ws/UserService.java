@@ -149,7 +149,7 @@ public class UserService {
     @RolesAllowed({"ADMINISTRATOR"})
     @Produces(MediaType.APPLICATION_JSON)
     public Response getUserPublications(@PathParam("username") String username) throws MyEntityNotFoundException{
-        List<Publication> publications = publicationBean.getUserPublications(username);
+        List<Publication> publications = publicationBean.findUserPublications(username);
         return Response.ok(PublicationDTO.from(publications)).build();
     }
 
