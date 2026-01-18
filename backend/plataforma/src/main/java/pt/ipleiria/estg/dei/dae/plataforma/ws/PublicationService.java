@@ -12,6 +12,7 @@ import pt.ipleiria.estg.dei.dae.plataforma.dtos.PublicationDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.PublicationHistoryDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.PublicationBean;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
+import pt.ipleiria.estg.dei.dae.plataforma.dtos.TagDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 import pt.ipleiria.estg.dei.dae.plataforma.security.Authenticated;
 
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
 public class PublicationService {
     @EJB
     private PublicationBean publicationBean;
+
 
     @Context
     private SecurityContext securityContext; //to get username from token
@@ -152,6 +154,7 @@ public class PublicationService {
                 .build();
     }
 
+    //todo: ISTO PODE SER?
     @DELETE
     @Path("/{id}")
     public Response deletePublication(@PathParam("id") long id) throws MyEntityNotFoundException {
@@ -196,5 +199,31 @@ public class PublicationService {
                 .collect(Collectors.toList());
 
         return Response.ok(dtos).build();
+    }
+
+    //associar tag
+    @POST
+    @Path("/{id}/tags")
+    public Response addTagToPublication(@PathParam("id") long id, TagDTO tagDto)
+            throws MyEntityNotFoundException {
+
+        publicationBean.addTag(id, tagDto.getName());
+        return Response.ok().build();
+    }
+
+    @DELETE
+    @Path("/{id}/tags/{tagName}")
+    public Response removeTagFromPublication(@PathParam("id") long id, @PathParam("tagName") String tagName)
+            throws MyEntityNotFoundException {
+
+        publicationBean.removeTag(id, tagName);
+        return Response.ok().build();
+    }
+
+    @GET
+    @Path("/{id}/tags")
+    public List<TagDTO> getPublicationTags(@PathParam("id") long id) throws MyEntityNotFoundException {
+        Publication publication = publicationBean.findOrFail(id);
+        return TagDTO.from(publication.getTags());
     }
 }

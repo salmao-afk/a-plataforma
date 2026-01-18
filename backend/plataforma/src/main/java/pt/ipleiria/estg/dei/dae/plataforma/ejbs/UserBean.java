@@ -6,6 +6,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.validation.ConstraintViolationException;
 import org.hibernate.Hibernate;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Comment;
+import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.UserRole;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
@@ -146,5 +147,35 @@ public class UserBean {
     public boolean canLogin(String username, String password) {
         var user = find(username);
         return user != null && Hasher.verify(password, user.getPassword());
+    }
+
+    public void subscribeTag(String username, long tagId) throws MyEntityNotFoundException {
+        User user = findOrFail(username);
+        Tag tag = em.find(Tag.class, tagId);
+
+        if (tag == null) {
+            throw new MyEntityNotFoundException("Tag não encontrada.");
+        }
+
+        // 1. A tal verificação (agora funciona graças ao Passo 1)
+        if (user.getSubscribedTags().contains(tag)) {
+            // Podes lançar erro ou simplesmente ignorar
+            throw new IllegalArgumentException("Tag já subscrita");
+        }
+
+        // 2. Adicionar e Gravar
+        user.addSubscribedTag(tag);
+
+        // Importante: Forçar a gravação na tabela de junção
+        em.merge(user);
+    }
+
+    public void unsubscribeTag(String username, long tagId) throws MyEntityNotFoundException {
+        User user = findOrFail(username);
+        Tag tag = em.find(Tag.class, tagId);
+
+        if (tag != null) {
+            user.removeSubscribedTag(tag);
+        }
     }
 }
