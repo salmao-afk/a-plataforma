@@ -90,9 +90,8 @@ public class UserService {
     //atualizar users
     @PUT
     @Path("/{username}")
-
     public Response updateUser(@PathParam("username") String username, UserDTO dto) throws MyEntityNotFoundException {
-        if(dto.getEmail() == null || dto.getName() == null){
+        if(dto.getEmail() == null && dto.getName() == null){
             throw new IllegalArgumentException("Necessita de alterar algum campo(email ou nome)!");
         }
         userBean.update(username, dto.getEmail(), dto.getName());

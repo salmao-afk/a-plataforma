@@ -85,7 +85,7 @@ public class PublicationBean {
                 try {
                     // Busca pelo atributo 'name', não pelo ID
                     Tag tag = em.createQuery(
-                                    "SELECT t FROM Tag t WHERE t.name = :name", Tag.class)
+                                    "SELECT t FROM Tag t WHERE t.id = :id", Tag.class)
                             .setParameter("name", tagName)
                             .getSingleResult();
 
