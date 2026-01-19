@@ -1,25 +1,36 @@
 package pt.ipleiria.estg.dei.dae.plataforma.ejbs;
 
+import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Rating;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 
+import java.util.List;
+
+@Stateless
 public class RatingBean {
     @PersistenceContext
     EntityManager em;
 
     private Rating findOrFail(long publicationId, String username){
-        try {
-            return em.createNamedQuery("Rating.findByUserAndPub", Rating.class)
-                    .setParameter("username", username)
-                    .setParameter("pubId", publicationId)
-                    .getSingleResult();
-        } catch (IllegalArgumentException e) {
-            throw e;
-        }
+        var results = em.createNamedQuery("Rating.findByUserAndPub", Rating.class)
+                .setParameter("username", username)
+                .setParameter("pubId", publicationId)
+                .getResultList();
+
+        return results.isEmpty() ? null : results.get(0);
+    }
+
+    public List<Rating> getUserRatings(String username) {
+        return em.createQuery(
+                        "SELECT r FROM Rating r JOIN FETCH r.publication WHERE r.user.username = :username ORDER BY r.id DESC",
+                        Rating.class)
+                .setParameter("username", username)
+                .getResultList();
     }
 
     public void setRating(long publicationId, String username, int value) throws MyEntityNotFoundException {

@@ -10,7 +10,9 @@ import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.PublicationDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.PublicationHistoryDTO;
+import pt.ipleiria.estg.dei.dae.plataforma.dtos.RatingDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.PublicationBean;
+import pt.ipleiria.estg.dei.dae.plataforma.ejbs.RatingBean;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.TagDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
@@ -32,6 +34,8 @@ public class PublicationService {
     @EJB
     private PublicationBean publicationBean;
 
+    @EJB
+    private RatingBean ratingBean;
 
     @Context
     private SecurityContext securityContext; //to get username from token
@@ -55,7 +59,7 @@ public class PublicationService {
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getPublication(@PathParam("id") long id) throws MyEntityNotFoundException {
-        Publication publication = publicationBean.findOrFail(id);
+        Publication publication = publicationBean.getPublication(id);
         PublicationDTO dto = PublicationDTO.from(publication);
         return Response.ok(dto).build();
     }
@@ -225,5 +229,29 @@ public class PublicationService {
     public List<TagDTO> getPublicationTags(@PathParam("id") long id) throws MyEntityNotFoundException {
         Publication publication = publicationBean.findOrFail(id);
         return TagDTO.from(publication.getTags());
+    }
+
+    @POST
+    @Path("/{id}/rating")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response setRating(@PathParam("id") long id, RatingDTO dto) throws MyEntityNotFoundException {
+        String username = securityContext.getUserPrincipal().getName();
+        try{
+            ratingBean.setRating(id,username,dto.getValue());
+            return Response.ok().build();
+        }catch (IllegalArgumentException e){
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+    }
+
+    @DELETE
+    @Path("/{id}/rating")
+    @Authenticated
+    public Response deleteRating(@PathParam("id") long publicationId)
+            throws MyEntityNotFoundException {
+
+        String username = securityContext.getUserPrincipal().getName();
+        ratingBean.removeRating(publicationId, username);
+        return Response.ok("Avaliação removida.").build();
     }
 }
