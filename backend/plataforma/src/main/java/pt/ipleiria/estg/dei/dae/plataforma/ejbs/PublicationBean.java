@@ -131,6 +131,10 @@ public class PublicationBean {
         }
     }
 
+    public Publication getPublication(long id) throws MyEntityNotFoundException {
+        return findOrFail(id);
+    }
+
     public List<Publication> findUserPublications(String username) {
         return em.createQuery(
                         "SELECT DISTINCT p FROM Publication p LEFT JOIN FETCH p.tags WHERE p.uploader.username = :username ORDER BY p.publicationDate DESC",

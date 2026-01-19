@@ -10,6 +10,7 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.*;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.CommentBean;
+import pt.ipleiria.estg.dei.dae.plataforma.ejbs.RatingBean;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.UserBean;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.PublicationBean;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Comment;
@@ -22,6 +23,7 @@ import pt.ipleiria.estg.dei.dae.plataforma.security.Authenticated;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Path("utilizadores") // ou "users"
 @Produces(MediaType.APPLICATION_JSON)
@@ -41,6 +43,8 @@ public class UserService {
     @EJB
     private PublicationBean publicationBean;
 
+    @EJB
+    private RatingBean ratingBean;
 
 
     //Criar utilizador
@@ -177,5 +181,33 @@ public class UserService {
         List<Comment> commentList = commentBean.getUserComments(username);
         List<CommentUserDTO> commentsDtos = CommentUserDTO.from(commentList);
         return Response.ok(commentsDtos).build();
+    }
+
+    //-----------------------------Ratings-----------------------------
+    @GET
+    @Path("/{username}/ratings")
+    @Authenticated
+    public Response getUserRatings(@PathParam("username") String username, @Context SecurityContext securityContext) {
+
+        String currentUser = securityContext.getUserPrincipal().getName();
+
+        boolean isSelf = currentUser.equals(username);
+        boolean isAdmin = securityContext.isUserInRole("ADMINISTRATOR");
+        boolean isResponsible = securityContext.isUserInRole("RESPONSIBLE");
+
+        if (!isSelf && !isAdmin && !isResponsible) {
+            return Response.status(Response.Status.FORBIDDEN)
+                    .entity("Não tens permissão para ver os ratings de outro utilizador.")
+                    .build();
+        }
+
+        // Buscar dados e converter para DTO
+        var ratings = ratingBean.getUserRatings(username);
+
+        List<RatingDTO> dtos = ratings.stream()
+                .map(RatingDTO::from)
+                .collect(Collectors.toList());
+
+        return Response.ok(dtos).build();
     }
 }
