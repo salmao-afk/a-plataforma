@@ -2,9 +2,11 @@
 import { reactive, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useAuthStore } from "~/stores/auth-store.js";
+import { useRouter } from "vue-router"; // 1. Importar Router
 
 const config = useRuntimeConfig();
 const api = config.public.apiBase;
+const router = useRouter(); // 2. Inicializar Router
 
 const loginFormData = reactive({
   username: "",
@@ -14,7 +16,7 @@ const loginFormData = reactive({
 const authStore = useAuthStore();
 const { token, user } = storeToRefs(authStore);
 
-const messages = ref([]);
+const messages = ref<any[]>([]);
 
 function reset() {
   authStore.logout();
@@ -23,7 +25,7 @@ function reset() {
 
 async function login() {
   try {
-    const response = await $fetch(`${api}/auth/login`, {
+    const response = await $fetch<any>(`${api}/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -32,7 +34,7 @@ async function login() {
       body: loginFormData
     });
 
-    token.value = response.token; // Supondo que a API retorna { token: "..." }
+    token.value = response.token;
 
     messages.value.push({
       method: "POST",
@@ -41,7 +43,16 @@ async function login() {
       payload: response
     });
 
+    // Buscar dados do utilizador
     await getUserInfo();
+
+    // 3. SE CHEGOU AQUI SEM ERROS, REDIRECIONA PARA A DASHBOARD
+    // Dei um pequeno timeout de 500ms só para veres o log verde a piscar antes de mudar de página
+    // (Podes remover o setTimeout e deixar só o router.push se quiseres instantâneo)
+    setTimeout(() => {
+      router.push('/dashboard');
+    }, 500);
+
   } catch (e: any) {
     console.error("login failed:", e);
     messages.value.push({
@@ -80,6 +91,8 @@ async function getUserInfo() {
       status: e?.response?.status || 500,
       payload: e
     });
+    // Se falhar ao buscar o user, lançamos o erro para impedir o redirect
+    throw e;
   }
 }
 </script>
@@ -144,36 +157,13 @@ async function getUserInfo() {
             </button>
           </div>
         </form>
-      </div>
-    </div>
-    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-2xl px-4">
 
-      <div v-if="token" class="mb-4 bg-green-50 border border-green-200 rounded-md p-4">
-        <h3 class="text-sm font-medium text-green-800">✅ Login com Sucesso! (Token Recebido)</h3>
-        <div class="mt-2 text-xs text-green-700 break-all font-mono bg-white p-2 rounded border border-green-100">
-          {{ token }}
+        <div class="mt-6 text-center">
+          <NuxtLink to="/" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+            Voltar ao Início
+          </NuxtLink>
         </div>
       </div>
-
-      <div v-if="user" class="mb-4 bg-blue-50 border border-blue-200 rounded-md p-4">
-        <h3 class="text-sm font-medium text-blue-800">👤 Dados do Utilizador</h3>
-        <pre class="mt-2 text-xs text-blue-700 font-mono bg-white p-2 rounded border border-blue-100 overflow-auto">{{ user }}</pre>
-      </div>
-
-      <div v-if="messages.length > 0" class="bg-gray-800 rounded-md p-4 shadow-lg text-white">
-        <h3 class="text-sm font-bold border-b border-gray-600 pb-2 mb-2">📡 Log de Rede</h3>
-        <div class="space-y-3">
-          <div v-for="(msg, i) in messages" :key="i" class="text-xs font-mono">
-            <div class="flex items-center gap-2">
-              <span :class="msg.status === 200 ? 'text-green-400' : 'text-red-400'">[{{ msg.status }}]</span>
-              <span class="text-yellow-300">{{ msg.method }}</span>
-              <span class="text-gray-400">{{ msg.url }}</span>
-            </div>
-            <pre class="mt-1 text-gray-300 opacity-75 overflow-auto max-h-20">{{ msg.payload }}</pre>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 </template>
