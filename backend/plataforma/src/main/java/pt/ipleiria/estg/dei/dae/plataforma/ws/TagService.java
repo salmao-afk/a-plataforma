@@ -41,6 +41,7 @@ public class TagService {
     }
 
     @POST
+    @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
     public Response createTag(TagDTO tagDTO){
         tagBean.create(tagDTO.getName(), tagDTO.getDescription());
         return Response.status(Response.Status.CREATED).entity(tagDTO).build();
