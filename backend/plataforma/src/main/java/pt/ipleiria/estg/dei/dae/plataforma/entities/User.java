@@ -55,6 +55,12 @@ public class User extends Versionable implements Serializable {
     @OneToMany(mappedBy = "uploader", cascade = CascadeType.REMOVE)
     private List<Publication> myPublications = new ArrayList<>();
 
+    @Column(nullable = true)
+    private String resetToken;
+
+    @Column(nullable = true)
+    private Date resetTokenExpirationDate;
+
     public User(int version, String username, String password, String email, String name, UserRole role, Boolean active, String statusReason) {
         this.version = version;
         this.username = username;
@@ -155,4 +161,15 @@ public class User extends Versionable implements Serializable {
     public void setStatusReason(String statusReason) {
         this.statusReason = statusReason;
     }
+
+    public String getResetToken() {
+        return resetToken;
+    }
+    public void setResetToken(String resetToken) {
+        this.resetToken = resetToken;
+    }
+    public Date getResetTokenExpirationDate() {
+        return resetTokenExpirationDate;
+    }
+    public void setResetTokenExpirationDate(Date resetTokenExpirationDate) {}
 }
