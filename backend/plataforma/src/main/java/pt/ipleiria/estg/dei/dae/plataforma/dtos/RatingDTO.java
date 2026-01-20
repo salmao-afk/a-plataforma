@@ -2,6 +2,8 @@ package pt.ipleiria.estg.dei.dae.plataforma.dtos;
 
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Rating;
 
+import java.util.List;
+
 public class RatingDTO {
     private int value;
 
@@ -26,6 +28,10 @@ public class RatingDTO {
                 r.getPublication().getId(),
                 r.getPublication().getTitle()
         );
+    }
+
+    public static List<RatingDTO> from(List<Rating> ratings) {
+        return ratings.stream().map(RatingDTO::from).toList();
     }
 
     public int getValue() { return value; }
