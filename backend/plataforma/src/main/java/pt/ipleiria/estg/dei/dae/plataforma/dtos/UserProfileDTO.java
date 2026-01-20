@@ -39,7 +39,6 @@ public class UserProfileDTO {
         this.active = user.isActive();
         this.role = user.getRole();
 
-        // Converter as listas usando os DTOs que já tens
         this.publicacoes = (pubs != null) ? PublicationDTO.from(pubs) : new ArrayList<>();
         this.comentarios = (comments != null) ? CommentUserDTO.from(comments) : new ArrayList<>();
         this.ratings = (ratings != null) ? ratings.stream().map(RatingDTO::from).collect(Collectors.toList()) : new ArrayList<>();
