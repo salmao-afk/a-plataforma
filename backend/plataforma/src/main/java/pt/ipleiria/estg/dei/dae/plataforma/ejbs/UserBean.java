@@ -5,10 +5,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.validation.ConstraintViolationException;
 import org.hibernate.Hibernate;
-import pt.ipleiria.estg.dei.dae.plataforma.entities.Comment;
-import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
-import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
-import pt.ipleiria.estg.dei.dae.plataforma.entities.UserRole;
+import pt.ipleiria.estg.dei.dae.plataforma.dtos.*;
+import pt.ipleiria.estg.dei.dae.plataforma.entities.*;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 import pt.ipleiria.estg.dei.dae.plataforma.security.Hasher;
 
@@ -18,6 +16,10 @@ import java.util.List;
 public class UserBean {
     @PersistenceContext
     private EntityManager em;
+
+    private PublicationBean publicationBean;
+    private CommentBean commentBean;
+    private RatingBean ratingBean;
 
     //TODO: throw exception
     public void create(String username, String password, String name, String email, UserRole role){
@@ -108,10 +110,49 @@ public class UserBean {
     }
 
 
+    //Atividade do user
+    public UserActivityDTO getUserActivity(String username) throws MyEntityNotFoundException {
+        User user = findOrFail(username);
 
+        List<Publication> publicacoes = publicationBean.findUserPublications(username);
+        List<PublicationDTO> publicacoesDtos = PublicationDTO.from(publicacoes);
 
+        List<Comment> comentarios = commentBean.getUserComments(username);
+        List<CommentUserDTO> comentariosDtos = CommentUserDTO.from(comentarios);
 
+        List<Rating> ratings = ratingBean.getUserRatings(username);
+        List<RatingDTO> ratingsDtos = RatingDTO.from(ratings);
 
+        UserActivityDTO activityDTO = new UserActivityDTO(
+                user.getUsername(),
+                user.getName(),
+                publicacoesDtos,
+                comentariosDtos,
+                ratingsDtos
+        );
+        return activityDTO;
+    }
+
+    //Profile do User
+    public UserProfileDTO getUserProfile(String username) throws MyEntityNotFoundException {
+        //Vai buscar user com as tags carregadas
+        User user = findOrFail(username);
+
+        //Listas das coisas do user
+        var publicacoes = publicationBean.findUserPublications(username);
+        var comentarios = commentBean.getUserComments(username);
+        var ratings = ratingBean.getUserRatings(username);
+
+        //DTO que vai juntar todos os dados, para devolver como queremos
+        UserProfileDTO dto = new UserProfileDTO(
+                user,
+                publicacoes,
+                comentarios,
+                ratings,
+                user.getSubscribedTags()
+        );
+        return dto;
+    }
 
 
     public User find(String username) {
@@ -178,19 +219,6 @@ public class UserBean {
 
         if (tag != null) {
             user.removeSubscribedTag(tag);
-        }
-    }
-
-    public User findWithTags(String username) throws MyEntityNotFoundException {
-        // JOIN FETCH carrega o utilizador E as tags numa só query
-        try {
-            return em.createQuery(
-                            "SELECT u FROM User u LEFT JOIN FETCH u.subscribedTags WHERE u.username = :username",
-                            User.class)
-                    .setParameter("username", username)
-                    .getSingleResult();
-        } catch (Exception e) {
-            throw new MyEntityNotFoundException("User não encontrado");
         }
     }
 }

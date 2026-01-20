@@ -12,6 +12,7 @@ import pt.ipleiria.estg.dei.dae.plataforma.dtos.*;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.*;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Comment;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
+import pt.ipleiria.estg.dei.dae.plataforma.entities.Rating;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityExistsException;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
@@ -76,19 +77,10 @@ public class UserService {
     @GET
     @Path("/{username}")
     @Produces(MediaType.APPLICATION_JSON)
-    @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE", "COLLABORATOR"})
+    @RolesAllowed({"ADMINISTRATOR"})
     public Response getUser(@PathParam("username") String username) throws MyEntityNotFoundException {
-
-        User user = userBean.find(username);
-        String principal = securityContext.getUserPrincipal().getName();
-
-        if (securityContext.isUserInRole("ADMINISTRATOR") ||
-                securityContext.isUserInRole("RESPONSIBLE") ||
-                principal.equals(username)) {
-
-            return Response.ok(UserDTO.fromUser(user)).build();
-        }
-        return Response.status(Response.Status.FORBIDDEN).build();
+        User user = userBean.findOrFail(username);
+        return Response.ok(UserDTO.fromUser(user)).build();
     }
 
     //atualizar users
@@ -100,7 +92,7 @@ public class UserService {
             throw new IllegalArgumentException("Necessita de alterar algum campo(email ou nome)!");
         }
         userBean.update(username, dto.getEmail(), dto.getName());
-        User user = userBean.findWithTags(username);
+        User user = userBean.findOrFail(username);
         var publicacoes = publicationBean.findUserPublications(username);
         var comentarios = commentBean.getUserComments(username);
         var ratings = ratingBean.getUserRatings(username);
@@ -166,43 +158,34 @@ public class UserService {
         return Response.ok(tagList).build();
     }
 
+    @GET
+    @Path("/{username}/atividade")
+    @RolesAllowed({"ADMINISTRATOR"})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getUserActivity(@PathParam("username") String username) throws MyEntityNotFoundException {
+        UserActivityDTO activityDTO = userBean.getUserActivity(username);
+        return Response.ok(activityDTO).build();
+    }
+
     //-----------------------------Dados Pessoais-----------------------------
     @GET
     @Path("/me")
-    @Authenticated
     @Produces(MediaType.APPLICATION_JSON)
     public Response getMyProfile() throws MyEntityNotFoundException {
         String username = securityContext.getUserPrincipal().getName();
 
-        //Vai buscar user com as tags carregadas
-        User user = userBean.findWithTags(username);
-
-        //Listas das coisas do user
-        var publicacoes = publicationBean.findUserPublications(username);
-        var comentarios = commentBean.getUserComments(username);
-        var ratings = ratingBean.getUserRatings(username);
-
-        //DTO que vai juntar todos os dados, para devolver como queremos
-        UserProfileDTO dto = new UserProfileDTO(
-                user,
-                publicacoes,
-                comentarios,
-                ratings,
-                user.getSubscribedTags()
-        );
-
+        UserProfileDTO dto = userBean.getUserProfile(username);
         return Response.ok(List.of(dto)).build();
     }
 
 
     @PUT
     @Path("/me")
-    @Authenticated
     @Produces(MediaType.APPLICATION_JSON)
     public Response updateMyProfile(UserProfileDTO dto) throws MyEntityNotFoundException {
         String username = securityContext.getUserPrincipal().getName();
         userBean.update(username, dto.getEmail(), dto.getName());
-        User user = userBean.findWithTags(username);
+        User user = userBean.findOrFail(username);
         var publicacoes = publicationBean.findUserPublications(username);
         var comentarios = commentBean.getUserComments(username);
         var ratings = ratingBean.getUserRatings(username);
@@ -219,7 +202,6 @@ public class UserService {
 
     @GET
     @Path("/me/ratings")
-    @Authenticated
     public Response getMyRatings() throws MyEntityNotFoundException{
         String username = securityContext.getUserPrincipal().getName();
         List<RatingDTO> ratings = ratingBean.getUserRatings(username).stream()
@@ -231,7 +213,6 @@ public class UserService {
     //obter comentarios do user que esta a fazer o pedido
     @Path("/me/comentarios")
     @GET
-    @Authenticated
     public Response getMyComments() throws MyEntityNotFoundException{
         //vai buscar o username do utilizador que faz o pedido
         String username = securityContext.getUserPrincipal().getName();
@@ -242,12 +223,25 @@ public class UserService {
 
     @Path("/me/tags-subscritas")
     @GET
-    @Authenticated
     public Response getMyTags() throws MyEntityNotFoundException{
         String username = securityContext.getUserPrincipal().getName();
-        List<TagDTO> tags = TagDTO.from(userBean.findWithTags(username).getSubscribedTags());
+        List<TagDTO> tags = TagDTO.from(userBean.findOrFail(username).getSubscribedTags());
         return Response.ok(tags).build();
     }
+
+    @GET
+    @Path("/me/atividade")
+    @RolesAllowed({"ADMINISTRATOR"})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getMyActivity() throws MyEntityNotFoundException {
+        String username = securityContext.getUserPrincipal().getName();
+
+        UserActivityDTO activityDTO = userBean.getUserActivity(username);
+        return Response.ok(activityDTO).build();
+    }
+
+
+
     //-----------------------------Publicações-----------------------------
     //obter publi de um user especifico
     @GET
@@ -267,7 +261,6 @@ public class UserService {
     @RolesAllowed({"ADMINISTRATOR"})
     @Produces(MediaType.APPLICATION_JSON)
     public Response getUserComments(@PathParam("username") String username) throws MyEntityNotFoundException{
-
         List<Comment> commentList = commentBean.getUserComments(username);
         List<CommentUserDTO> commentsDtos = CommentUserDTO.from(commentList);
 
@@ -278,21 +271,8 @@ public class UserService {
     //-----------------------------Ratings-----------------------------
     @GET
     @Path("/{username}/ratings")
-    @Authenticated
+    @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
     public Response getUserRatings(@PathParam("username") String username, @Context SecurityContext securityContext) {
-
-        String currentUser = securityContext.getUserPrincipal().getName();
-
-        boolean isSelf = currentUser.equals(username);
-        boolean isAdmin = securityContext.isUserInRole("ADMINISTRATOR");
-        boolean isResponsible = securityContext.isUserInRole("RESPONSIBLE");
-
-        if (!isSelf && !isAdmin && !isResponsible) {
-            return Response.status(Response.Status.FORBIDDEN)
-                    .entity("Não tens permissão para ver os ratings de outro utilizador.")
-                    .build();
-        }
-
         // Buscar dados e converter para DTO
         var ratings = ratingBean.getUserRatings(username);
 
@@ -309,12 +289,12 @@ public class UserService {
     @Path("/{username}/email")
     public Response sendEmail(@PathParam("username") String username, EmailDTO email)
             throws MyEntityNotFoundException {
-
         User user = userBean.findOrFail(username);
 
-        // Chama o teu Bean novo
         emailBean.send(user.getEmail(), email.getSubject(), email.getBody());
 
         return Response.ok("Email enviado.").build();
     }
+
+
 }
