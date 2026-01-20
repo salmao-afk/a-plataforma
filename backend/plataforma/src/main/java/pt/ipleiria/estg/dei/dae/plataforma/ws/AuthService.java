@@ -2,6 +2,7 @@ package pt.ipleiria.estg.dei.dae.plataforma.ws;
 
 import jakarta.ejb.EJB;
 import jakarta.inject.Inject;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
@@ -16,6 +17,8 @@ import pt.ipleiria.estg.dei.dae.plataforma.security.Authenticated;
 import pt.ipleiria.estg.dei.dae.plataforma.security.TokenIssuer;
 
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 @Path("auth")
 @Produces({MediaType.APPLICATION_JSON})
@@ -24,6 +27,9 @@ public class AuthService {
 
     @Context
     private SecurityContext securityContext;
+
+    @Context
+    private HttpServletRequest request;
 
     @EJB
     private UserBean userBean;
@@ -37,6 +43,19 @@ public class AuthService {
         return Response.status(Response.Status.UNAUTHORIZED).build();
     }
 
+
+    //logout
+    //stateless
+    @POST
+    @Path("/logout")
+    @Authenticated
+    public Response logout() {
+        if (request.getSession(false) != null) {
+            request.getSession().invalidate();
+        }
+        return Response.ok("{\"mensagem\": \"Logout efetuado com sucesso\"}").build();
+    }
+
     @GET
     @Authenticated
     @Path("/user")
@@ -45,4 +64,10 @@ public class AuthService {
         var user = userBean.find(username);
         return Response.ok(UserDTO.fromUser(user)).build();
     }
+
+
+
+
 }
+
+

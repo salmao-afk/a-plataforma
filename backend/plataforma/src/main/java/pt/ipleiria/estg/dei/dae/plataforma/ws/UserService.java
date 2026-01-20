@@ -67,6 +67,7 @@ public class UserService {
 
     //Listar todos os utilizadores
     @GET
+    @RolesAllowed({"ADMINISTRATOR"})
     public List<UserDTO> getAllUsers() {
         return UserDTO.fromUsers(userBean.findAll());
     }
@@ -93,18 +94,31 @@ public class UserService {
     //atualizar users
     @PUT
     @Path("/{username}")
-    public Response updateUser(@PathParam("username") String username, UserDTO dto) throws MyEntityNotFoundException {
+    @RolesAllowed({"ADMINISTRATOR"})
+    public Response updateUser(@PathParam("username") String username, UserProfileDTO dto) throws MyEntityNotFoundException {
         if(dto.getEmail() == null && dto.getName() == null){
             throw new IllegalArgumentException("Necessita de alterar algum campo(email ou nome)!");
         }
         userBean.update(username, dto.getEmail(), dto.getName());
-        User user = userBean.find(username);
-        return Response.ok(UserDTO.fromUser(user)).build();
+        User user = userBean.findWithTags(username);
+        var publicacoes = publicationBean.findUserPublications(username);
+        var comentarios = commentBean.getUserComments(username);
+        var ratings = ratingBean.getUserRatings(username);
+        UserProfileDTO responseDTO = new UserProfileDTO(
+                user,
+                publicacoes,
+                comentarios,
+                ratings,
+                user.getSubscribedTags()
+        );
+
+        return Response.ok(responseDTO).build();
     }
 
     //apagar users
     @DELETE
     @Path("/{username}")
+    @RolesAllowed({"ADMINISTRATOR"})
     public Response deleteUser(@PathParam("username") String username) throws MyEntityNotFoundException {
         userBean.delete(username);
         Map<String, String> response = new HashMap<>();
@@ -143,8 +157,98 @@ public class UserService {
     }
 
 
-    //-----------------------------Publicações-----------------------------
+    @GET
+    @Path("/{username}/tags-subscritas")
+    @RolesAllowed({"ADMINISTRATOR"})
+    public Response getUserTags(@PathParam("username") String username) throws MyEntityNotFoundException {
+        User user = userBean.findOrFail(username);
+        List<TagDTO> tagList = TagDTO.from(user.getSubscribedTags());
+        return Response.ok(tagList).build();
+    }
 
+    //-----------------------------Dados Pessoais-----------------------------
+    @GET
+    @Path("/me")
+    @Authenticated
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getMyProfile() throws MyEntityNotFoundException {
+        String username = securityContext.getUserPrincipal().getName();
+
+        //Vai buscar user com as tags carregadas
+        User user = userBean.findWithTags(username);
+
+        //Listas das coisas do user
+        var publicacoes = publicationBean.findUserPublications(username);
+        var comentarios = commentBean.getUserComments(username);
+        var ratings = ratingBean.getUserRatings(username);
+
+        //DTO que vai juntar todos os dados, para devolver como queremos
+        UserProfileDTO dto = new UserProfileDTO(
+                user,
+                publicacoes,
+                comentarios,
+                ratings,
+                user.getSubscribedTags()
+        );
+
+        return Response.ok(List.of(dto)).build();
+    }
+
+
+    @PUT
+    @Path("/me")
+    @Authenticated
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response updateMyProfile(UserProfileDTO dto) throws MyEntityNotFoundException {
+        String username = securityContext.getUserPrincipal().getName();
+        userBean.update(username, dto.getEmail(), dto.getName());
+        User user = userBean.findWithTags(username);
+        var publicacoes = publicationBean.findUserPublications(username);
+        var comentarios = commentBean.getUserComments(username);
+        var ratings = ratingBean.getUserRatings(username);
+        UserProfileDTO responseDTO = new UserProfileDTO(
+                user,
+                publicacoes,
+                comentarios,
+                ratings,
+                user.getSubscribedTags()
+        );
+
+        return Response.ok(responseDTO).build();
+    }
+
+    @GET
+    @Path("/me/ratings")
+    @Authenticated
+    public Response getMyRatings() throws MyEntityNotFoundException{
+        String username = securityContext.getUserPrincipal().getName();
+        List<RatingDTO> ratings = ratingBean.getUserRatings(username).stream()
+                .map(RatingDTO::from)
+                .collect(Collectors.toList());
+        return Response.ok(ratings).build();
+    }
+
+    //obter comentarios do user que esta a fazer o pedido
+    @Path("/me/comentarios")
+    @GET
+    @Authenticated
+    public Response getMyComments() throws MyEntityNotFoundException{
+        //vai buscar o username do utilizador que faz o pedido
+        String username = securityContext.getUserPrincipal().getName();
+        List<Comment> commentList = commentBean.getUserComments(username);
+        List<CommentUserDTO> commentsDtos = CommentUserDTO.from(commentList);
+        return Response.ok(commentsDtos).build();
+    }
+
+    @Path("/me/tags-subscritas")
+    @GET
+    @Authenticated
+    public Response getMyTags() throws MyEntityNotFoundException{
+        String username = securityContext.getUserPrincipal().getName();
+        List<TagDTO> tags = TagDTO.from(userBean.findWithTags(username).getSubscribedTags());
+        return Response.ok(tags).build();
+    }
+    //-----------------------------Publicações-----------------------------
     //obter publi de um user especifico
     @GET
     @Path("/{username}/publicacoes")
@@ -170,17 +274,6 @@ public class UserService {
         return Response.ok(commentsDtos).build();
     }
 
-    //obter comentarios do user que esta a fazer o pedido
-    @Path("/me/comentarios")
-    @GET
-    @RolesAllowed({"COLLABORATOR"})
-    public Response getMyComments() throws MyEntityNotFoundException{
-        //vai buscar o username do utilizador que faz o pedido
-        String username = securityContext.getUserPrincipal().getName();
-        List<Comment> commentList = commentBean.getUserComments(username);
-        List<CommentUserDTO> commentsDtos = CommentUserDTO.from(commentList);
-        return Response.ok(commentsDtos).build();
-    }
 
     //-----------------------------Ratings-----------------------------
     @GET
@@ -209,6 +302,8 @@ public class UserService {
 
         return Response.ok(dtos).build();
     }
+
+
 
     @POST
     @Path("/{username}/email")
