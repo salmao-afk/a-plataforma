@@ -9,10 +9,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.*;
-import pt.ipleiria.estg.dei.dae.plataforma.ejbs.CommentBean;
-import pt.ipleiria.estg.dei.dae.plataforma.ejbs.RatingBean;
-import pt.ipleiria.estg.dei.dae.plataforma.ejbs.UserBean;
-import pt.ipleiria.estg.dei.dae.plataforma.ejbs.PublicationBean;
+import pt.ipleiria.estg.dei.dae.plataforma.ejbs.*;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Comment;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
@@ -46,6 +43,8 @@ public class UserService {
     @EJB
     private RatingBean ratingBean;
 
+    @EJB
+    private EmailBean emailBean;
 
     //Criar utilizador
     @POST
@@ -209,5 +208,18 @@ public class UserService {
                 .collect(Collectors.toList());
 
         return Response.ok(dtos).build();
+    }
+
+    @POST
+    @Path("/{username}/email")
+    public Response sendEmail(@PathParam("username") String username, EmailDTO email)
+            throws MyEntityNotFoundException {
+
+        User user = userBean.findOrFail(username);
+
+        // Chama o teu Bean novo
+        emailBean.send(user.getEmail(), email.getSubject(), email.getBody());
+
+        return Response.ok("Email enviado.").build();
     }
 }
