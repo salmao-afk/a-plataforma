@@ -1,9 +1,12 @@
 package pt.ipleiria.estg.dei.dae.plataforma.ejbs;
 
+import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.validation.ConstraintViolationException;
+import org.apache.james.mime4j.dom.datetime.DateTime;
 import org.hibernate.Hibernate;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Comment;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
@@ -12,12 +15,18 @@ import pt.ipleiria.estg.dei.dae.plataforma.entities.UserRole;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 import pt.ipleiria.estg.dei.dae.plataforma.security.Hasher;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 @Stateless
 public class UserBean {
     @PersistenceContext
     private EntityManager em;
+
+    @EJB
+    private EmailBean emailBean;
 
     //TODO: throw exception
     public void create(String username, String password, String name, String email, UserRole role){
@@ -191,6 +200,54 @@ public class UserBean {
                     .getSingleResult();
         } catch (Exception e) {
             throw new MyEntityNotFoundException("User não encontrado");
+        }
+    }
+
+    public void sendPassowrdResetEmail(String email){
+        try{
+            User user = em.createQuery("SELECT u FROM User u WHERE u.email = :email", User.class).setParameter("email", email).getSingleResult();
+
+            //gerar token
+            String token = java.util.UUID.randomUUID().toString();
+            user.setResetToken(token);
+            user.setResetTokenExpirationDate(Date.from(Instant.now().plusSeconds(3600)));
+
+            // Link simulado (o frontend depois trata disto)
+            String link = "http://localhost:3000/auth/reset-password?token=" + token;
+
+            String subject = "Recuperação de Password";
+            String body = "Olá " + user.getName() + ",\n\n" +
+                    "Para definir uma nova password, usa o seguinte token ou link:\n" +
+                    "Token: " + token + "\n" +
+                    "Link: " + link;
+
+            emailBean.send(user.getEmail(), subject, body);
+
+        } catch (NoResultException e) {
+            // SEGURANÇA: Nunca digas "Email não encontrado". Ignora silenciosamente
+            // para que hackers não consigam descobrir que emails existem no sistema.
+        }
+    }
+    public void resetPassword(String token, String newPassword) throws IllegalArgumentException {
+        try {
+            User user = em.createQuery("SELECT u FROM User u WHERE u.resetToken = :token", User.class)
+                    .setParameter("token", token)
+                    .getSingleResult();
+
+            // Verificar se o token expirou
+            if (user.getResetTokenExpirationDate() == null || user.getResetTokenExpirationDate().before(new Date().from(Instant.now()))) {
+                throw new IllegalArgumentException("O token expirou. Pede um novo.");
+            }
+
+            // Atualizar password
+            user.setPassword(Hasher.hash(newPassword));
+
+            // Limpar o token para não ser usado 2 vezes
+            user.setResetToken(null);
+            user.setResetTokenExpirationDate(null);
+
+        } catch (NoResultException e) {
+            throw new IllegalArgumentException("Token inválido.");
         }
     }
 }
