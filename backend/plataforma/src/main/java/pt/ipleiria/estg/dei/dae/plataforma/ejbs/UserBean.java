@@ -112,6 +112,8 @@ public class UserBean {
 
 
 
+
+
     public User find(String username) {
         User user = em.find(User.class, username);
         if (user != null) {
@@ -176,6 +178,19 @@ public class UserBean {
 
         if (tag != null) {
             user.removeSubscribedTag(tag);
+        }
+    }
+
+    public User findWithTags(String username) throws MyEntityNotFoundException {
+        // JOIN FETCH carrega o utilizador E as tags numa só query
+        try {
+            return em.createQuery(
+                            "SELECT u FROM User u LEFT JOIN FETCH u.subscribedTags WHERE u.username = :username",
+                            User.class)
+                    .setParameter("username", username)
+                    .getSingleResult();
+        } catch (Exception e) {
+            throw new MyEntityNotFoundException("User não encontrado");
         }
     }
 }
