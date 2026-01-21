@@ -20,6 +20,7 @@ public class Tag extends Versionable implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
+    @Column(unique = true)
     private String name;
 
     @ManyToMany(mappedBy = "tags")
