@@ -1,42 +1,36 @@
 <script setup>
 import { reactive, ref } from 'vue';
-import { useAuthStore } from '~/stores/auth-store.js';
 import { useRouter } from 'vue-router';
+import { usePublicationsStore } from '~/stores/publications-store.js'; // Store
 
-const config = useRuntimeConfig();
-const api = config.public.apiBase;
-const authStore = useAuthStore();
 const router = useRouter();
+const pubStore = usePublicationsStore(); // Store
 
 const form = reactive({ title: "", description: "", scientificArea: "", type: "Article", authors: "", tags: "" });
 const fileInput = ref(null);
-const isLoading = ref(false);
 
 function handleFile(e) { fileInput.value = e.target.files[0]; }
 
 async function submitUpload() {
   if (!fileInput.value) return alert("Ficheiro obrigatório");
-  isLoading.value = true;
+
+  const fd = new FormData();
+  Object.keys(form).forEach(k => fd.append(k, form[k]));
+  fd.append("file", fileInput.value);
+
   try {
-    const fd = new FormData();
-    Object.keys(form).forEach(k => fd.append(k, form[k]));
-    fd.append("file", fileInput.value);
-
-    await $fetch(`${api}/publicacoes`, {
-      method: 'POST', headers: { Authorization: `Bearer ${authStore.token}` }, body: fd
-    });
-
-    // Sucesso: Redireciona para a lista
+    // Chama a ACTION da store
+    await pubStore.createPublication(fd);
     router.push('/publicacoes');
-  } catch (e) { alert("Erro ao criar."); }
-  finally { isLoading.value = false; }
+  } catch (e) {
+    alert("Erro ao criar.");
+  }
 }
 </script>
 
 <template>
   <div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow mt-8">
     <h1 class="text-2xl font-bold mb-6">Nova Publicação</h1>
-
     <form @submit.prevent="submitUpload" class="space-y-4">
       <div><label class="block font-bold text-sm">Título</label><input v-model="form.title" required class="w-full border p-2 rounded" /></div>
 
@@ -55,8 +49,8 @@ async function submitUpload() {
 
       <div class="flex justify-end gap-2 pt-4">
         <NuxtLink to="/publicacoes" class="px-4 py-2 text-gray-600 border rounded">Cancelar</NuxtLink>
-        <button type="submit" :disabled="isLoading" class="px-6 py-2 bg-blue-600 text-white rounded font-bold">
-          {{ isLoading ? 'A enviar...' : 'Criar Publicação' }}
+        <button type="submit" :disabled="pubStore.isLoading" class="px-6 py-2 bg-blue-600 text-white rounded font-bold">
+          {{ pubStore.isLoading ? 'A enviar...' : 'Criar Publicação' }}
         </button>
       </div>
     </form>
