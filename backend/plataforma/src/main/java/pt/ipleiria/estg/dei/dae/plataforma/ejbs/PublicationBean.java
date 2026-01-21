@@ -1,9 +1,7 @@
 package pt.ipleiria.estg.dei.dae.plataforma.ejbs;
 
 import jakarta.annotation.Resource;
-import jakarta.ejb.EJB;
-import jakarta.ejb.Stateful;
-import jakarta.ejb.Stateless;
+import jakarta.ejb.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
@@ -47,10 +45,6 @@ public class PublicationBean {
     @Resource
     private SessionContext ctx;
 
-    @EJB
-    private LLMBean llmBean;
-    @Resource
-    private SessionContext ctx;
 
     @EJB
     private TagBean tagBean;
@@ -60,7 +54,7 @@ public class PublicationBean {
     private static final String UPLOAD_DIR = "/tmp/uploads";
 
     // --- CREATE ---
-    public Publication create(String title, String scientificArea, String description, List<String> authors, String type, String uploaderUsername, List<String> tagNames, String filename, InputStream stream) throws IOException {
+    public void create(String title, String scientificArea, String description, List<String> authors, String type, String uploaderUsername, List<String> tagNames, String filename, InputStream stream) throws IOException {
 
         User uploader = userBean.find(uploaderUsername);
         if(uploader == null){
@@ -341,5 +335,9 @@ public class PublicationBean {
             System.err.println("Erro ao ler PDF: " + e.getMessage());
         }
         return null;
+    }
+
+    public Publication find(long id) {
+        return em.find(Publication.class, id);
     }
 }
