@@ -8,13 +8,10 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.PublicationDTO;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.PublicationHistoryDTO;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.RatingDTO;
+import pt.ipleiria.estg.dei.dae.plataforma.dtos.*;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.PublicationBean;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.RatingBean;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.TagDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 import pt.ipleiria.estg.dei.dae.plataforma.security.Authenticated;
 
@@ -254,4 +251,18 @@ public class PublicationService {
         ratingBean.removeRating(publicationId, username);
         return Response.ok("Avaliação removida.").build();
     }
+
+    @PATCH
+    @Path("/{id}/editar-descricao")
+    @Authenticated
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response updateDescription(@PathParam("id") long publicationId, PubDescriptionDTO dto) throws MyEntityNotFoundException
+    {
+        if(dto.getDescription().isBlank() || dto.getDescription().length() > 1000){
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        publicationBean.updateDescription(publicationId, dto.getDescription());
+        return Response.ok("Descrição atualizada com sucesso").build();
+    }
+
 }
