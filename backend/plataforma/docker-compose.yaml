@@ -29,3 +29,16 @@ services:
     depends_on:
       - db
       - smtp
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    environment: # <--- ADICIONA ISTO
+      - OLLAMA_HOST=0.0.0.0
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - default # Garante que está na mesma rede que os outros
+volumes:
+  ollama_data:

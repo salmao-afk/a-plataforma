@@ -59,8 +59,9 @@ public class User extends Versionable implements Serializable {
     @Column(nullable = true)
     private String resetToken;
 
+    @Temporal(TemporalType.TIMESTAMP)
     @Column(nullable = true)
-    private Date resetTokenExpirationDate;
+    private Date tokenExpiry;
 
     public User(int version, String username, String password, String email, String name, UserRole role, Boolean active, String statusReason) {
         this.version = version;
@@ -170,8 +171,12 @@ public class User extends Versionable implements Serializable {
     public void setResetToken(String resetToken) {
         this.resetToken = resetToken;
     }
-    public Date getResetTokenExpirationDate() {
-        return resetTokenExpirationDate;
+
+    public Date getTokenExpiry() {
+        return tokenExpiry;
     }
-    public void setResetTokenExpirationDate(Date resetTokenExpirationDate) {}
+
+    public void setTokenExpiry(Date tokenExpiry) {
+        this.tokenExpiry = tokenExpiry;
+    }
 }

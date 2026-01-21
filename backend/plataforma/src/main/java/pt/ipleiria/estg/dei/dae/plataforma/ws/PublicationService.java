@@ -290,4 +290,18 @@ public class PublicationService {
         ratingBean.removeRating(publicationId, username);
         return Response.ok("Avaliação removida.").build();
     }
+
+    @PATCH
+    @Path("/{id}/editar-descricao")
+    @Authenticated
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response updateDescription(@PathParam("id") long publicationId, PubDescriptionDTO dto) throws MyEntityNotFoundException
+    {
+        if(dto.getDescription().isBlank() || dto.getDescription().length() > 1000){
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        publicationBean.updateDescription(publicationId, dto.getDescription());
+        return Response.ok("Descrição atualizada com sucesso").build();
+    }
+
 }

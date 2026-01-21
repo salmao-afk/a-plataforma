@@ -1,10 +1,14 @@
 package pt.ipleiria.estg.dei.dae.plataforma.ejbs;
 
+import jakarta.annotation.Resource;
 import jakarta.ejb.EJB;
+import jakarta.ejb.Stateful;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import jakarta.persistence.criteria.*;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.PublicationDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
@@ -37,6 +41,16 @@ public class PublicationBean {
 
     @EJB
     private UserBean userBean;
+
+    @EJB
+    private LLMBean llmBean;
+    @Resource
+    private SessionContext ctx;
+
+    @EJB
+    private LLMBean llmBean;
+    @Resource
+    private SessionContext ctx;
 
     @EJB
     private TagBean tagBean;
@@ -94,7 +108,23 @@ public class PublicationBean {
         // publication.addHistory(history);
 
         em.persist(publication);
-        return publication;
+        em.flush();
+        if (filename != null) {
+            PublicationBean myProxy = ctx.getBusinessObject(PublicationBean.class);
+            myProxy.generateSummaryAsync(publication.getId());
+        }
+    }
+
+    @Asynchronous
+    public void generateSummaryAsync(long publicationId) {
+        System.out.println(">>> A INICIAR RESUMO GERADO PELA IA PARA PUBLI COM ID: " + publicationId);
+        generateSmartSummary(publicationId);
+        System.out.println(">>> RESUMO CONCLUIDO PARA PUBLI COM ID: " + publicationId);
+    }
+
+    public void updateDescription(long publicationId, String newDescription) throws MyEntityNotFoundException {
+        Publication publication = findOrFail(publicationId);
+        publication.setDescription(newDescription);
     }
 
     // --- READ (Buscas) ---
@@ -278,5 +308,38 @@ public class PublicationBean {
             throw new IllegalArgumentException("Tag não está associada a esta publicação.");
         }
         publication.getTags().remove(tag);
+    }
+
+    public String generateSmartSummary(long publicationId) {
+        Publication pub = find(publicationId);
+        if (pub == null || pub.getFilepath() == null) return "Publicação sem ficheiro.";
+
+        try {
+            String pdfText = extractTextFromPdf(pub.getFilepath());
+
+            if (pdfText != null && !pdfText.isEmpty()) {
+                String resumo = llmBean.generateSummary(pdfText);
+
+                pub.setDescription(resumo);
+                return resumo;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Erro: " + e.getMessage();
+        }
+        return "Não foi possível gerar resumo.";
+    }
+
+    //metodo para ler pdf
+    private String extractTextFromPdf(String filePath) {
+        try (PDDocument document = PDDocument.load(new File(filePath))) {
+            if (!document.isEncrypted()) {
+                PDFTextStripper stripper = new PDFTextStripper();
+                return stripper.getText(document);
+            }
+        } catch (IOException e) {
+            System.err.println("Erro ao ler PDF: " + e.getMessage());
+        }
+        return null;
     }
 }
