@@ -29,9 +29,9 @@ public class Publication extends Versionable implements Serializable {
 
     @NotNull
     private String title;
-    private String description;
 
-    //TODO: descricao com IA
+    @jakarta.persistence.Column(length = 10000)
+    private String description;
 
     @NotNull
     private LocalDate publicationDate;
