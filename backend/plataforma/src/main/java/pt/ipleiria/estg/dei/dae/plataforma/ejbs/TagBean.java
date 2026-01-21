@@ -58,4 +58,19 @@ public class TagBean {
         tag.setDescription(newDescription);
     }
 
+    // Método auxiliar para o PublicationBean usar
+    public Tag findByNameOrCreate(String name) {
+        try {
+            // Tenta encontrar
+            return em.createQuery("SELECT t FROM Tag t WHERE t.name = :name", Tag.class)
+                    .setParameter("name", name)
+                    .getSingleResult();
+        } catch (Exception e) {
+            // Se não encontrar, cria uma nova
+            Tag newTag = new Tag(name, "Gerada automaticamente");
+            em.persist(newTag);
+            return newTag; // Retorna a tag já "gerida" pelo EntityManager
+        }
+    }
+
 }

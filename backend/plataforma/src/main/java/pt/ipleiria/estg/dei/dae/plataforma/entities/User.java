@@ -1,5 +1,6 @@
 package pt.ipleiria.estg.dei.dae.plataforma.entities;
 
+import jakarta.json.bind.annotation.JsonbTransient;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -131,6 +132,7 @@ public class User extends Versionable implements Serializable {
         this.active = active;
     }
 
+    @JsonbTransient
     public List<Tag> getSubscribedTags() {
         return subscribedTags;
     }

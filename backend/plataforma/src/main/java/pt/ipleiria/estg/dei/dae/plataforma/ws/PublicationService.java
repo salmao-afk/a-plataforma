@@ -8,13 +8,12 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.PublicationDTO;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.PublicationHistoryDTO;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.RatingDTO;
+import pt.ipleiria.estg.dei.dae.plataforma.dtos.*;
+import pt.ipleiria.estg.dei.dae.plataforma.ejbs.CommentBean;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.PublicationBean;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.RatingBean;
+import pt.ipleiria.estg.dei.dae.plataforma.entities.Comment;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.TagDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 import pt.ipleiria.estg.dei.dae.plataforma.security.Authenticated;
 
@@ -37,12 +36,26 @@ public class PublicationService {
     @EJB
     private RatingBean ratingBean;
 
+    @EJB
+    private CommentBean commentBean;
+
     @Context
     private SecurityContext securityContext; //to get username from token
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public List<PublicationDTO> getAllPublications() {
+    public List<PublicationDTO> getAllPublications(
+            @QueryParam("tags") String tags, // <--- OBRIGATÓRIO TER ISTO
+            @QueryParam("area") String area
+    ) {
+        // Se o frontend enviar ?tags=Java, entra aqui
+        if ((tags != null && !tags.isEmpty()) || (area != null && !area.isEmpty())) {
+            return PublicationDTO.from(
+                    publicationBean.findAllWithFilters(area, tags, null, true)
+            );
+        }
+
+        // Se não enviar nada, devolve tudo
         return PublicationDTO.from(publicationBean.findAll());
     }
 
@@ -96,6 +109,29 @@ public class PublicationService {
             fileContent = filePart.getBody(InputStream.class, null);
         }
         publicationBean.create(title, scientificArea, description, authors, type, uploaderUsername, tags, fileName, fileContent);
+
+        return Response.status(Response.Status.CREATED).build();
+    }
+
+    @GET
+    @Path("/{id}/comentarios")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getPublicationComments(@PathParam("id") long publicationId) throws MyEntityNotFoundException {
+        List<Comment> comments = commentBean.getComments(publicationId);
+        // Aqui usamos o CommentDTO "rico" (com nome do autor) para a lista pública
+        return Response.ok(CommentDTO.from(comments)).build();
+    }
+
+    // 2. ADICIONAR COMENTÁRIO
+    @POST
+    @Path("/{id}/comentarios")
+    @Authenticated
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response addComment(@PathParam("id") long publicationId, CommentDTO dto) throws MyEntityNotFoundException {
+        String username = securityContext.getUserPrincipal().getName();
+
+        // O Bean trata de criar a entidade e associar o User/Pub
+        commentBean.create(publicationId, username, dto.getContent());
 
         return Response.status(Response.Status.CREATED).build();
     }

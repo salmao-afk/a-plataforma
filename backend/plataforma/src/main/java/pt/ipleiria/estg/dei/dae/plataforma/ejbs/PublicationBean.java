@@ -1,10 +1,11 @@
 package pt.ipleiria.estg.dei.dae.plataforma.ejbs;
 
 import jakarta.ejb.EJB;
-import jakarta.ejb.Stateful;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.criteria.*;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.PublicationDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.PublicationHistory;
@@ -12,6 +13,10 @@ import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityExistsException;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
+
+// Importa Criteria API
+import jakarta.persistence.criteria.*;
+
 
 import java.io.File;
 import java.io.IOException;
@@ -22,7 +27,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,35 +38,36 @@ public class PublicationBean {
     @EJB
     private UserBean userBean;
 
-    private static final String UPLOAD_DIR = "/tmp/uploads/";
+    @EJB
+    private TagBean tagBean;
 
-    //TODO: throw exception
-    public void create(String title, String scientificArea, String description, List<String> authors, String type, String uploaderUsername, List<String> tagNames, String filename, InputStream stream) throws IOException {
-        //Validar Uploader
+    // Diretório de uploads na pasta do utilizador (funciona em Windows/Linux/Mac)
+    // Mudamos para /tmp/uploads porque é garantido que o Linux/Docker deixa escrever lá
+    private static final String UPLOAD_DIR = "/tmp/uploads";
+
+    // --- CREATE ---
+    public Publication create(String title, String scientificArea, String description, List<String> authors, String type, String uploaderUsername, List<String> tagNames, String filename, InputStream stream) throws IOException {
+
         User uploader = userBean.find(uploaderUsername);
         if(uploader == null){
-            throw new IllegalArgumentException("User not found");
+            throw new IllegalArgumentException("User not found: " + uploaderUsername);
         }
 
         if (stream == null || filename == null || filename.isEmpty()) {
             throw new IllegalArgumentException("É obrigatório fazer upload de um ficheiro.");
         }
 
-        //Tratar do file
-        //Criar folder se não existir
-        var targetDirectoryPath = Paths.get(UPLOAD_DIR);
+        // 1. Gestão de Ficheiros
+        Path targetDirectoryPath = Paths.get(UPLOAD_DIR);
         if(!Files.exists(targetDirectoryPath)){
             Files.createDirectories(targetDirectoryPath);
         }
 
-        //garantir nome unico
-        var targetFilePath = targetDirectoryPath.resolve("file_" + UUID.randomUUID());
-        //guardar ficheiro no disco
-        if(stream != null){
-            Files.copy(stream, targetFilePath, StandardCopyOption.REPLACE_EXISTING);
-        }
+        String uniqueFileName = "file_" + UUID.randomUUID() + "_" + filename;
+        Path targetFilePath = targetDirectoryPath.resolve(uniqueFileName);
+        Files.copy(stream, targetFilePath, StandardCopyOption.REPLACE_EXISTING);
 
-        //instanciar a entidade
+        // 2. Criar Entidade
         Publication publication = new Publication();
         publication.setTitle(title);
         publication.setType(type);
@@ -71,65 +76,90 @@ public class PublicationBean {
         publication.setUploader(uploader);
         publication.setPublicationDate(LocalDate.now());
         publication.setDescription(description);
+        publication.setFilename(filename);
+        publication.setFilepath(targetFilePath.toString());
 
-        // Metadados do Ficheiro
-        if (stream != null) {
-            publication.setFilename(filename); // Nome original (ex: "relatorio.pdf")
-            publication.setFilepath(targetFilePath.toString()); // Caminho físico
-        }
-
-        //tags
+        // 3. Gestão de Tags
         List<Tag> tags = new ArrayList<>();
         if(tagNames != null && !tagNames.isEmpty()){
             for (String tagName : tagNames) {
-                try {
-                    // Busca pelo atributo 'name', não pelo ID
-                    Tag tag = em.createQuery(
-                                    "SELECT t FROM Tag t WHERE t.id = :id", Tag.class)
-                            .setParameter("name", tagName)
-                            .getSingleResult();
-
-                    publication.getTags().add(tag);
-
-                } catch (IllegalArgumentException e) {
-                    // Se não existe, cria nova
-                    Tag newTag = new Tag(tagName, "Gerada automaticamente");
-                    em.persist(newTag);
-                    publication.getTags().add(newTag);
-                }
+                tags.add(findOrCreateTag(tagName.trim()));
             }
         }
         publication.setTags(tags);
 
+        // Opcional: Criar histórico inicial (snapshot da criação)
+        // PublicationHistory history = new PublicationHistory(uploader, publication);
+        // em.persist(history);
+        // publication.addHistory(history);
+
         em.persist(publication);
+        return publication;
     }
 
+    // --- READ (Buscas) ---
+
     public List<Publication> findAll() {
-        // O "DISTINCT" é importante porque o JOIN pode duplicar resultados
-        // se uma publicação tiver 3 tags (apareceria 3 vezes).
         return em.createQuery(
                 "SELECT DISTINCT p FROM Publication p LEFT JOIN FETCH p.tags ORDER BY p.publicationDate DESC",
                 Publication.class
         ).getResultList();
     }
 
+    // Método essencial para a Barra de Pesquisa do Frontend funcionar
+    public List<Publication> findAllWithFilters(String area, String tagsStr, Boolean hidden, boolean isAdmin) {
+        // Construção dinâmica da Query em Texto (Mais fácil de controlar)
+        StringBuilder queryStr = new StringBuilder("SELECT DISTINCT p FROM Publication p");
 
-    public Publication find(long id) {
-        return em.find(Publication.class, id);
+        // Se houver filtro de tag, fazemos logo o JOIN para filtrar
+        if (tagsStr != null && !tagsStr.isEmpty()) {
+            queryStr.append(" JOIN p.tags t");
+        }
+
+        queryStr.append(" WHERE 1=1"); // Truque para facilitar adicionar 'AND' depois
+
+        // Filtro de Área Científica
+        if (area != null && !area.isEmpty()) {
+            queryStr.append(" AND LOWER(p.scientificArea) LIKE :area");
+        }
+
+        // Filtro de Tag (AQUI ESTÁ A CORREÇÃO)
+        // Usamos 'JOIN' (Inner Join) acima, por isso só devolve publicações que tenham a tag
+        if (tagsStr != null && !tagsStr.isEmpty()) {
+            queryStr.append(" AND t.name = :tagName");
+        }
+
+        // Ordenação
+        queryStr.append(" ORDER BY p.publicationDate DESC");
+
+        // Criar a Query
+        var query = em.createQuery(queryStr.toString(), Publication.class);
+
+        // Preencher os parâmetros
+        if (area != null && !area.isEmpty()) {
+            query.setParameter("area", "%" + area.toLowerCase() + "%");
+        }
+        if (tagsStr != null && !tagsStr.isEmpty()) {
+            query.setParameter("tagName", tagsStr);
+        }
+
+        return query.getResultList();
     }
 
     public Publication findOrFail(long id) throws MyEntityNotFoundException {
         try {
-            // LEFT JOIN FETCH carrega as tags na mesma query
+            // LEFT JOIN FETCH é obrigatório para carregar as tags sem erro
             return em.createQuery(
                             "SELECT p FROM Publication p LEFT JOIN FETCH p.tags WHERE p.id = :id",
                             Publication.class)
                     .setParameter("id", id)
                     .getSingleResult();
-        } catch (Exception e) {
+        } catch (NoResultException e) {
             throw new MyEntityNotFoundException("Publicação não encontrada com id: " + id);
         }
     }
+
+    // --- MÉTODOS QUE PEDISTE EXPLICITAMENTE ---
 
     public Publication getPublication(long id) throws MyEntityNotFoundException {
         return findOrFail(id);
@@ -143,84 +173,64 @@ public class PublicationBean {
                 .getResultList();
     }
 
-    // Descarregar ficheiro
+    // ------------------------------------------
+
+    // --- FILES & DELETE ---
+
     public File getFile(long id) throws MyEntityNotFoundException {
-        // Encontrar publicação na BD
         Publication publication = findOrFail(id);
-
-        // Verificar se existe ficheiro
         if(publication.getFilepath() == null || publication.getFilepath().isEmpty()){
-            throw new MyEntityNotFoundException("Publicação sem ficheiro!");
+            throw new MyEntityNotFoundException("Registo sem ficheiro associado.");
         }
-
-        // Descarregar ficheiro
         File file = new File(publication.getFilepath());
-
         if(!file.exists()){
-            throw new MyEntityNotFoundException("Ficheiro físico não encontrado!");
+            throw new MyEntityNotFoundException("O ficheiro físico foi apagado do servidor.");
         }
-
         return file;
     }
 
-    // Apagar  publicacao
     public void delete(long id) throws MyEntityNotFoundException {
         Publication publication = findOrFail(id);
 
-        //apagar ficheiro do disco se tiver
-        if(publication.getFilepath() != null && !publication.getFilepath().isEmpty()){
-            Path path = Paths.get(publication.getFilepath());
+        if(publication.getFilepath() != null){
             try{
-                Files.deleteIfExists(path);
-            }catch(IOException e){
-                System.out.println("Erro ao apagar ficheiro: " + e.getMessage());
+                Files.deleteIfExists(Paths.get(publication.getFilepath()));
+            } catch(IOException e){
+                System.err.println("Aviso: Não foi possível apagar o ficheiro físico: " + e.getMessage());
             }
         }
-
-        //apagar publicacao da BD
         em.remove(publication);
     }
 
-    public void update(long id, PublicationDTO dto, String modifierUsername)
-            throws MyEntityNotFoundException {
+    // --- UPDATE ---
 
-        // 1. Buscas as Entidades
+    public void update(long id, PublicationDTO dto, String modifierUsername) throws MyEntityNotFoundException {
         Publication publication = findOrFail(id);
         User modifier = userBean.findOrFail(modifierUsername);
 
-        // 2. Histórico (Snapshot do que estava ANTES)
-        // Nota: O construtor do History deve copiar os valores atuais da 'publication'
-        PublicationHistory history = new PublicationHistory(modifier,publication);
+        // Snapshot histórico
+        PublicationHistory history = new PublicationHistory(modifier, publication);
         em.persist(history);
         publication.addHistory(history);
 
-        // 3. Atualizar Dados Simples (Lê do DTO)
+        // Atualizar campos
         publication.setTitle(dto.getTitle());
         publication.setScientificArea(dto.getScientificArea());
         publication.setType(dto.getType());
         publication.setDescription(dto.getDescription());
-        publication.setAuthors(dto.getAuthors()); // Assume que a tua entidade aceita a lista
+        publication.setAuthors(dto.getAuthors());
 
-        // 4. Atualizar Tags (A lógica que falámos na resposta anterior)
+        // Atualizar Tags
         if (dto.getTags() != null) {
             List<Tag> newTags = new ArrayList<>();
             for (String tagName : dto.getTags()) {
-                try {
-                    Tag tag = em.createQuery("SELECT t FROM Tag t WHERE t.name = :name", Tag.class)
-                            .setParameter("name", tagName)
-                            .getSingleResult();
-                    newTags.add(tag);
-                } catch (Exception e) {
-                    Tag newTag = new Tag(tagName, "Default tag description");
-                    em.persist(newTag);
-                    newTags.add(newTag);
-                }
+                newTags.add(findOrCreateTag(tagName.trim()));
             }
             publication.setTags(newTags);
         }
     }
 
-    public List<PublicationHistory> getHistory(long id) throws MyEntityNotFoundException {
+    public List<PublicationHistory> getHistory(long id) {
         return em.createQuery(
                         "SELECT h FROM PublicationHistory h WHERE h.publication.id = :id ORDER BY h.modificationDate DESC",
                         PublicationHistory.class)
@@ -228,33 +238,45 @@ public class PublicationBean {
                 .getResultList();
     }
 
-    public void addTag(long publicationId, String tagName) throws MyEntityNotFoundException, MyEntityExistsException{
-        Publication publication = findOrFail(publicationId);
+    // --- AUXILIARES TAGS ---
 
-        Tag tag = em.find(Tag.class, tagName);
-        if(tag == null){
-            throw new MyEntityNotFoundException("Tag not found");
+    private Tag findOrCreateTag(String tagName) {
+        try {
+            return em.createQuery("SELECT t FROM Tag t WHERE t.name = :name", Tag.class)
+                    .setParameter("name", tagName)
+                    .getSingleResult();
+        } catch (NoResultException e) {
+            Tag newTag = new Tag(tagName, "Gerada automaticamente");
+            em.persist(newTag);
+            return newTag;
         }
+    }
+
+    public void addTag(long publicationId, String tagName) throws MyEntityNotFoundException, MyEntityExistsException {
+        Publication publication = findOrFail(publicationId);
+        Tag tag = findOrCreateTag(tagName);
 
         if(publication.getTags().contains(tag)){
-            throw new MyEntityExistsException("Tag already associated with publication");
+            throw new MyEntityExistsException("Tag já associada.");
         }
-
         publication.getTags().add(tag);
     }
 
-    public void removeTag(long publicationId, String tagName) throws MyEntityNotFoundException{
+    public void removeTag(long publicationId, String tagName) throws MyEntityNotFoundException {
         Publication publication = findOrFail(publicationId);
 
-        Tag tag = em.find(Tag.class, tagName);
-        if(tag == null){
-            throw new MyEntityNotFoundException("Tag not found");
+        Tag tag;
+        try {
+            tag = em.createQuery("SELECT t FROM Tag t WHERE t.name = :name", Tag.class)
+                    .setParameter("name", tagName)
+                    .getSingleResult();
+        } catch (NoResultException e) {
+            throw new MyEntityNotFoundException("Tag não encontrada.");
         }
 
         if(!publication.getTags().contains(tag)){
-            throw new IllegalArgumentException("Tag not associated with publication");
+            throw new IllegalArgumentException("Tag não está associada a esta publicação.");
         }
-
         publication.getTags().remove(tag);
     }
 }
