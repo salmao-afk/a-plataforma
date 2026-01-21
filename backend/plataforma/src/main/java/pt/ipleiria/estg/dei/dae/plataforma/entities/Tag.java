@@ -2,6 +2,7 @@ package pt.ipleiria.estg.dei.dae.plataforma.entities;
 
 import jakarta.persistence.*;
 
+import jakarta.json.bind.annotation.JsonbTransient;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,6 +58,7 @@ public class Tag extends Versionable implements Serializable {
         this.name = name;
     }
 
+    @JsonbTransient
     public List<Publication> getPublications() {
         return publications;
     }
@@ -65,6 +67,7 @@ public class Tag extends Versionable implements Serializable {
         this.publications = publications;
     }
 
+    @JsonbTransient
     public List<User> getSubscribers() {
         return subscribers;
     }

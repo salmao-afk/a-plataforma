@@ -142,6 +142,7 @@ public class UserBean {
     }
 
     //Profile do User
+    /*
     public UserProfileDTO getUserProfile(String username) throws MyEntityNotFoundException {
         //Vai buscar user com as tags carregadas
         User user = findOrFail(username);
@@ -161,6 +162,8 @@ public class UserBean {
         );
         return dto;
     }
+    */
+
 
 
     public User find(String username) {

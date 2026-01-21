@@ -174,8 +174,37 @@ public class UserService {
     public Response getMyProfile() throws MyEntityNotFoundException {
         String username = securityContext.getUserPrincipal().getName();
 
-        UserProfileDTO dto = userBean.getUserProfile(username);
+        // ERRO ESTAVA AQUI: userBean.getUserProfile(username);
+        // CORREÇÃO: Vamos construir o perfil aqui no Serviço
+        UserProfileDTO dto = buildCompleteUserProfile(username);
+
+        // Retorna o objeto (se o frontend espera lista, usa List.of, mas o ideal é objeto direto)
         return Response.ok(List.of(dto)).build();
+    }
+
+    // ... outros métodos ...
+
+    // --- ADICIONE ESTE MÉTODO NO FINAL DA CLASSE UserService ---
+    // Este método junta as peças todas (User + Publicações + Comentários + Ratings)
+    private UserProfileDTO buildCompleteUserProfile(String username) throws MyEntityNotFoundException {
+        // 1. Buscar o User básico
+        User user = userBean.findOrFail(username);
+
+        // 2. Buscar as Publicações desse user (usando o PublicationBean que JÁ ESTÁ injetado aqui)
+        var publicacoes = publicationBean.findUserPublications(username);
+
+        // 3. Buscar comentários e ratings
+        var comentarios = commentBean.getUserComments(username);
+        var ratings = ratingBean.getUserRatings(username);
+
+        // 4. Juntar tudo no DTO
+        return new UserProfileDTO(
+                user,
+                publicacoes,
+                comentarios,
+                ratings,
+                user.getSubscribedTags()
+        );
     }
 
 

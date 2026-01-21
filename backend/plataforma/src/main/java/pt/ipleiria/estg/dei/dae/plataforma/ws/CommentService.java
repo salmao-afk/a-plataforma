@@ -32,7 +32,7 @@ public class CommentService {
     private SecurityContext securityContext;
 
     @POST
-    @RolesAllowed("COLLABORATOR")
+    @Authenticated
     public Response createComment(@PathParam("pubId") long publicationId, @Valid CommentDTO dto) throws MyEntityNotFoundException{
         // Obter o utilizador autenticado pelo Security Context
         String username = securityContext.getUserPrincipal().getName();
@@ -80,9 +80,9 @@ public class CommentService {
         List<Comment> commentsList = commentBean.getComments(pubId);
 
         //Converte para DTOs
-        List<CommentUserDTO> commentsDtos = CommentUserDTO.from(commentsList);
+        List<CommentDTO> commentsDTO = CommentDTO.from(commentsList);
 
-        return Response.ok(commentsDtos).build();
+        return Response.ok(commentsDTO).build();
     }
 
 

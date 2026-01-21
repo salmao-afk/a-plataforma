@@ -66,7 +66,7 @@ public class Publication extends Versionable implements Serializable {
     @ManyToOne
     private User hiddenBy;
 
-    @ManyToMany
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.EAGER)
     @JoinTable(name = "publications_tags",
             joinColumns = @JoinColumn(name = "publication_id"),
             inverseJoinColumns = @JoinColumn(name = "tag_id"))

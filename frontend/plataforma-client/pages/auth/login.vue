@@ -179,27 +179,5 @@ async function getUserInfo() {
                 </form>
             </div>
         </div>
-
-        <!-- Debug info (pode remover em produção) -->
-        <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-2xl px-4">
-            <div v-if="authStore.token" class="mb-4 bg-green-50 border border-green-200 rounded-md p-4">
-                <h3 class="text-sm font-medium text-green-800">✅ Login com Sucesso!</h3>
-                <p class="mt-1 text-xs text-green-700">A redirecionar para a dashboard...</p>
-            </div>
-
-            <div v-if="messages.length > 0" class="bg-gray-800 rounded-md p-4 shadow-lg text-white">
-                <h3 class="text-sm font-bold border-b border-gray-600 pb-2 mb-2">📡 Log de Rede</h3>
-                <div class="space-y-3">
-                    <div v-for="(msg, i) in messages" :key="i" class="text-xs font-mono">
-                        <div class="flex items-center gap-2">
-                            <span :class="msg.status === 200 ? 'text-green-400' : 'text-red-400'">[{{ msg.status }}]</span>
-                            <span class="text-yellow-300">{{ msg.method }}</span>
-                            <span class="text-gray-400">{{ msg.url }}</span>
-                        </div>
-                        <pre class="mt-1 text-gray-300 opacity-75 overflow-auto max-h-20">{{ msg.payload }}</pre>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 </template>
