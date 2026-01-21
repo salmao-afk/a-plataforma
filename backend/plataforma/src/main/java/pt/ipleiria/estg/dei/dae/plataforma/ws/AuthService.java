@@ -10,6 +10,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.AuthDTO;
+import pt.ipleiria.estg.dei.dae.plataforma.dtos.EmailDTO;
+import pt.ipleiria.estg.dei.dae.plataforma.dtos.NewPasswordDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.UserDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.UserBean;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
@@ -66,7 +68,28 @@ public class AuthService {
     }
 
 
+    @POST
+    @Path("/esqueci-password")
+    public Response forgotPassword(EmailDTO dto) {
+        userBean.sendPasswordResetEmail(dto.getEmail());
 
+        return Response.ok("Se o email existir, as instruções foram enviadas.").build();
+    }
+
+    @POST
+    @Path("/recuperar-password")
+    public Response resetPassword(NewPasswordDTO dto) {
+        try {
+            userBean.resetPassword(dto.getToken(), dto.getNewPassword());
+            return Response.ok("Password alterada com sucesso.").build();
+        } catch (Exception e) {
+            String errorMsg = e.getMessage();
+            if (e.getCause() != null) {
+                errorMsg = e.getCause().getMessage();
+            }
+            return Response.status(Response.Status.BAD_REQUEST).entity(errorMsg).build();
+        }
+    }
 
 }
 

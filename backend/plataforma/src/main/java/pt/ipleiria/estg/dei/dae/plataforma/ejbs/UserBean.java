@@ -229,51 +229,40 @@ public class UserBean {
             user.removeSubscribedTag(tag);
         }
     }
-    public void sendPassowrdResetEmail(String email){
-        try{
-            User user = em.createQuery("SELECT u FROM User u WHERE u.email = :email", User.class).setParameter("email", email).getSingleResult();
 
-            //gerar token
-            String token = java.util.UUID.randomUUID().toString();
-            user.setResetToken(token);
-            user.setResetTokenExpirationDate(Date.from(Instant.now().plusSeconds(3600)));
-
-            // Link simulado (o frontend depois trata disto)
-            String link = "http://localhost:3000/auth/reset-password?token=" + token;
-
-            String subject = "Recuperação de Password";
-            String body = "Olá " + user.getName() + ",\n\n" +
-                    "Para definir uma nova password, usa o seguinte token ou link:\n" +
-                    "Token: " + token + "\n" +
-                    "Link: " + link;
-
-            emailBean.send(user.getEmail(), subject, body);
-
-        } catch (NoResultException e) {
-            // SEGURANÇA: Nunca digas "Email não encontrado". Ignora silenciosamente
-            // para que hackers não consigam descobrir que emails existem no sistema.
-        }
-    }
-    public void resetPassword(String token, String newPassword) throws IllegalArgumentException {
+    public void sendPasswordResetEmail(String email) {
         try {
-            User user = em.createQuery("SELECT u FROM User u WHERE u.resetToken = :token", User.class)
-                    .setParameter("token", token)
+            User user = em.createQuery("SELECT u FROM User u WHERE u.email = :email", User.class)
+                    .setParameter("email", email)
                     .getSingleResult();
 
-            // Verificar se o token expirou
-            if (user.getResetTokenExpirationDate() == null || user.getResetTokenExpirationDate().before(new Date().from(Instant.now()))) {
-                throw new IllegalArgumentException("O token expirou. Pede um novo.");
-            }
+            String token = java.util.UUID.randomUUID().toString();
+            user.setResetToken(token);
 
-            // Atualizar password
-            user.setPassword(Hasher.hash(newPassword));
+            Date validade = Date.from(Instant.now().plusSeconds(86400));
+            user.setTokenExpiry(validade);
 
-            // Limpar o token para não ser usado 2 vezes
-            user.setResetToken(null);
-            user.setResetTokenExpirationDate(null);
+            em.flush(); // Força a escrita
 
-        } catch (NoResultException e) {
-            throw new IllegalArgumentException("Token inválido.");
+
+            //TODO: frontend trata do link real
+            String link = "http://localhost:3000/auth/reset-password?token=" + token;
+            emailBean.send(user.getEmail(), "Recuperar Password", "Token: " + token);
+
+        } catch (NoResultException e) { }
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        User user = em.createQuery("SELECT u FROM User u WHERE u.resetToken = :token", User.class)
+                .setParameter("token", token)
+                .getSingleResult();
+
+        if (user.getTokenExpiry() == null || user.getTokenExpiry().before(new Date())) {
+            throw new IllegalArgumentException("O token expirou ou é inválido.");
         }
+
+        user.setPassword(Hasher.hash(newPassword));
+        user.setResetToken(null);
+        user.setTokenExpiry(null);
     }
 }
