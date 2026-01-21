@@ -3,6 +3,7 @@ package pt.ipleiria.estg.dei.dae.plataforma.dtos;
 public class EmailDTO {
     private String subject;
     private String body;
+    private String email;
 
     public EmailDTO() {
     }
@@ -21,5 +22,13 @@ public class EmailDTO {
 
     public void setBody(String body) {
         this.body = body;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 }

@@ -285,6 +285,7 @@ public class UserService {
 
 
 
+    //-----------------------------Mails-----------------------------
     @POST
     @Path("/{username}/email")
     public Response sendEmail(@PathParam("username") String username, EmailDTO email)
@@ -295,6 +296,4 @@ public class UserService {
 
         return Response.ok("Email enviado.").build();
     }
-
-
 }
