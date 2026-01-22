@@ -141,7 +141,10 @@ public class UserService {
     @PATCH
     @Path("/{username}/role")
     @RolesAllowed({"ADMINISTRATOR"})
-    public Response changeUserRole(@PathParam("username") String username,@Valid UserRoleDTO dto) throws MyEntityNotFoundException {
+    public Response changeUserRole(@PathParam("username") String username, UserDTO dto) throws MyEntityNotFoundException {
+        if(dto.getRole() == null){
+            throw new IllegalArgumentException("Necessita de alterar algum campo(role)!");
+        }
         userBean.changeRole(username, dto.getRole());
         Map<String, String> response = new HashMap<>();
         response.put("mensagem", "Role do utilizador alterado com sucesso");
@@ -181,8 +184,6 @@ public class UserService {
         // Retorna o objeto (se o frontend espera lista, usa List.of, mas o ideal é objeto direto)
         return Response.ok(List.of(dto)).build();
     }
-
-    // ... outros métodos ...
 
     // --- ADICIONE ESTE MÉTODO NO FINAL DA CLASSE UserService ---
     // Este método junta as peças todas (User + Publicações + Comentários + Ratings)

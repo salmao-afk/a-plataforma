@@ -14,7 +14,6 @@ public class UserProfileDTO {
     private String password;
 
     private UserRole role;
-
     private boolean active;
 
     private List<PublicationDTO> publicacoes;

@@ -17,16 +17,20 @@ public class UserDTO implements Serializable {
     private String name;
     private List<String> subscribedTags = new ArrayList<>();
     private UserRole role;
+    Boolean active;
+    String statusReason;
 
     public UserDTO() {
     }
 
-    public UserDTO(String username, String email, String name, List<String> subscribedTags, UserRole role) {
+    public UserDTO(String username, String email, String name, List<String> subscribedTags, UserRole role, Boolean active, String statusReason) {
         this.username = username;
         this.email = email;
         this.name = name;
         this.subscribedTags = subscribedTags;
         this.role = role;
+        this.active = active;
+        this.statusReason = statusReason;
     }
 
     public String getUsername() {
@@ -85,6 +89,22 @@ public class UserDTO implements Serializable {
         subscribedTags.remove(tag);
     }
 
+    public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
+    }
+
+    public String getStatusReason() {
+        return statusReason;
+    }
+
+    public void setStatusReason(String statusReason) {
+        this.statusReason = statusReason;
+    }
+
     public static UserDTO fromUser(User user) {
         return new UserDTO(
                 user.getUsername(),
@@ -92,7 +112,9 @@ public class UserDTO implements Serializable {
                 user.getName(),
                 // Converte a lista de Entidades Tag para lista de Strings (nomes das tags)
                 user.getSubscribedTags() == null ? new ArrayList<>() : user.getSubscribedTags().stream().map(Tag::getName).collect(Collectors.toList()),
-                user.getRole()
+                user.getRole(),
+                user.isActive(),
+                user.getStatusReason()
         );
     }
 

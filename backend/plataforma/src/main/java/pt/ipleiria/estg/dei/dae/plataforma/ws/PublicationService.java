@@ -295,7 +295,7 @@ public class PublicationService {
     @Path("/{id}/editar-descricao")
     @Authenticated
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response updateDescription(@PathParam("id") long publicationId, PubDescriptionDTO dto) throws MyEntityNotFoundException
+    public Response updateDescription(@PathParam("id") long publicationId, PublicationDTO dto) throws MyEntityNotFoundException
     {
         if(dto.getDescription().isBlank() || dto.getDescription().length() > 1000){
             return Response.status(Response.Status.BAD_REQUEST).build();
