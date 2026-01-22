@@ -89,7 +89,7 @@ public class UserDTO implements Serializable {
         subscribedTags.remove(tag);
     }
 
-    public Boolean getActive() {
+    public Boolean isActive() {
         return active;
     }
 

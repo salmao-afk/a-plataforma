@@ -20,7 +20,7 @@ public class CommentDTO {
     @NotBlank(message = "O comentário não pode estar vazio")
     private String content;
 
-    private boolean hidden;
+    private Boolean hidden;
     private String hideReason;
 
     private String authorUsername;
@@ -77,11 +77,11 @@ public class CommentDTO {
         this.content = content;
     }
 
-    public boolean isHidden() {
+    public Boolean isHidden() {
         return hidden;
     }
 
-    public void setHidden(boolean hidden) {
+    public void setHidden(Boolean hidden) {
         this.hidden = hidden;
     }
 

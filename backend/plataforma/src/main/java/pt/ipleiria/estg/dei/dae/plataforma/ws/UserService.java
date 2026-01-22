@@ -88,10 +88,10 @@ public class UserService {
     @Path("/{username}")
     @RolesAllowed({"ADMINISTRATOR"})
     public Response updateUser(@PathParam("username") String username, UserProfileDTO dto) throws MyEntityNotFoundException {
-        if(dto.getEmail() == null && dto.getName() == null){
+        if(dto.getUser().getEmail() == null && dto.getUser().getName() == null){
             throw new IllegalArgumentException("Necessita de alterar algum campo(email ou nome)!");
         }
-        userBean.update(username, dto.getEmail(), dto.getName());
+        userBean.update(username, dto.getUser().getEmail(), dto.getUser().getName());
         User user = userBean.findOrFail(username);
         var publicacoes = publicationBean.findUserPublications(username);
         var comentarios = commentBean.getUserComments(username);
@@ -100,8 +100,7 @@ public class UserService {
                 user,
                 publicacoes,
                 comentarios,
-                ratings,
-                user.getSubscribedTags()
+                ratings
         );
 
         return Response.ok(responseDTO).build();
@@ -124,7 +123,10 @@ public class UserService {
     @PATCH
     @Path("/{username}/estado")
     @RolesAllowed({"ADMINISTRATOR"})
-    public Response suspendUser(@PathParam("username") String username,@Valid UserStatusDTO dto) throws MyEntityNotFoundException {
+    public Response suspendUser(@PathParam("username") String username,UserDTO dto) throws MyEntityNotFoundException {
+        if(dto.isActive() == null){
+            throw new IllegalArgumentException("Necessita de alterar algum campo(active)!");
+        }
         if(dto.isActive()){
             userBean.activate(username);
         }
@@ -203,8 +205,7 @@ public class UserService {
                 user,
                 publicacoes,
                 comentarios,
-                ratings,
-                user.getSubscribedTags()
+                ratings
         );
     }
 
@@ -214,7 +215,7 @@ public class UserService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response updateMyProfile(UserProfileDTO dto) throws MyEntityNotFoundException {
         String username = securityContext.getUserPrincipal().getName();
-        userBean.update(username, dto.getEmail(), dto.getName());
+        userBean.update(username, dto.getUser().getEmail(), dto.getUser().getName());
         User user = userBean.findOrFail(username);
         var publicacoes = publicationBean.findUserPublications(username);
         var comentarios = commentBean.getUserComments(username);
@@ -223,8 +224,7 @@ public class UserService {
                 user,
                 publicacoes,
                 comentarios,
-                ratings,
-                user.getSubscribedTags()
+                ratings
         );
 
         return Response.ok(responseDTO).build();
