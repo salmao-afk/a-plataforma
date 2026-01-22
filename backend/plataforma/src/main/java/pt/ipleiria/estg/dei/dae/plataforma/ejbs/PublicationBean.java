@@ -93,13 +93,10 @@ public class PublicationBean {
 
         if(tagNames != null && !tagNames.isEmpty()){
             for (String tagName : tagNames) {
-                // Obtém ou cria a tag (assumo que o teu findOrCreateTag devolve a entidade Tag)
-                Tag tag = findOrCreateTag(tagName.trim());
+                Tag tag = tagBean.findByName(tagName.trim());
                 tags.add(tag);
 
-                //subscritores desta tag
                 for (User subscriber : tag.getSubscribers()) {
-                    //O próprio uploader não deve receber notificação
                     if (!subscriber.getUsername().equals(uploaderUsername)) {
                         usersToNotify.add(subscriber);
                     }
@@ -160,15 +157,12 @@ public class PublicationBean {
 
     // Método essencial para a Barra de Pesquisa do Frontend funcionar
     public List<Publication> findAllWithFilters(String area, String tagsStr, Boolean hidden, boolean isAdmin) {
-        // Construção dinâmica da Query em Texto (Mais fácil de controlar)
         StringBuilder queryStr = new StringBuilder("SELECT DISTINCT p FROM Publication p");
-
-        // Se houver filtro de tag, fazemos logo o JOIN para filtrar
         if (tagsStr != null && !tagsStr.isEmpty()) {
             queryStr.append(" JOIN p.tags t");
         }
 
-        queryStr.append(" WHERE 1=1"); // Truque para facilitar adicionar 'AND' depois
+        queryStr.append(" WHERE 1=1");
 
         // Filtro de Área Científica
         if (area != null && !area.isEmpty()) {
@@ -176,7 +170,6 @@ public class PublicationBean {
         }
 
         // Filtro de Tag (AQUI ESTÁ A CORREÇÃO)
-        // Usamos 'JOIN' (Inner Join) acima, por isso só devolve publicações que tenham a tag
         if (tagsStr != null && !tagsStr.isEmpty()) {
             queryStr.append(" AND t.name = :tagName");
         }
@@ -241,18 +234,6 @@ public class PublicationBean {
         return file;
     }
 
-    public void delete(long id) throws MyEntityNotFoundException {
-        Publication publication = findOrFail(id);
-
-        if(publication.getFilepath() != null){
-            try{
-                Files.deleteIfExists(Paths.get(publication.getFilepath()));
-            } catch(IOException e){
-                System.err.println("Aviso: Não foi possível apagar o ficheiro físico: " + e.getMessage());
-            }
-        }
-        em.remove(publication);
-    }
 
     // --- UPDATE ---
 
@@ -276,7 +257,7 @@ public class PublicationBean {
         if (dto.getTags() != null) {
             List<Tag> newTags = new ArrayList<>();
             for (String tagName : dto.getTags()) {
-                newTags.add(findOrCreateTag(tagName.trim()));
+                newTags.add(tagBean.findByName(tagName.trim()));
             }
             publication.setTags(newTags);
         }
@@ -306,7 +287,7 @@ public class PublicationBean {
 
     public void addTag(long publicationId, String tagName) throws MyEntityNotFoundException, MyEntityExistsException {
         Publication publication = findOrFail(publicationId);
-        Tag tag = findOrCreateTag(tagName);
+        Tag tag = tagBean.findByName(tagName);
 
         if(publication.getTags().contains(tag)){
             throw new MyEntityExistsException("Tag já associada.");
@@ -314,10 +295,10 @@ public class PublicationBean {
         publication.getTags().add(tag);
     }
 
-    public void removeTag(long publicationId, String tagName) throws MyEntityNotFoundException {
+    public void removeTag(long publicationId, long tagId) throws MyEntityNotFoundException {
         Publication publication = findOrFail(publicationId);
-
-        Tag tag;
+        Tag tag = em.find(Tag.class, tagId);
+        String tagName = tagBean.getTagName(tag);
         try {
             tag = em.createQuery("SELECT t FROM Tag t WHERE t.name = :name", Tag.class)
                     .setParameter("name", tagName)

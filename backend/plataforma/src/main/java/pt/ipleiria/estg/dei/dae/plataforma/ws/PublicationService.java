@@ -1,5 +1,6 @@
 package pt.ipleiria.estg.dei.dae.plataforma.ws;
 
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.ejb.EJB;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
@@ -45,17 +46,15 @@ public class PublicationService {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public List<PublicationDTO> getAllPublications(
-            @QueryParam("tags") String tags, // <--- OBRIGATÓRIO TER ISTO
+            @QueryParam("tags") String tags,
             @QueryParam("area") String area
     ) {
-        // Se o frontend enviar ?tags=Java, entra aqui
+        // Se o frontend enviar ?tags=Java
         if ((tags != null && !tags.isEmpty()) || (area != null && !area.isEmpty())) {
             return PublicationDTO.from(
                     publicationBean.findAllWithFilters(area, tags, null, true)
             );
         }
-
-        // Se não enviar nada, devolve tudo
         return PublicationDTO.from(publicationBean.findAll());
     }
 
@@ -80,11 +79,9 @@ public class PublicationService {
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     public Response createPublication(MultipartFormDataInput input) throws IOException {
-
-        //get username from token
+        //get username pelo token
         String uploaderUsername = securityContext.getUserPrincipal().getName();
 
-        //read data from multipart form
         Map<String, List<InputPart>> uploadForm = input.getFormDataMap();
 
         String title = getTextValue(uploadForm, "title");
@@ -92,9 +89,6 @@ public class PublicationService {
         String scientificArea = getTextValue(uploadForm, "scientificArea");
         String description = getTextValue(uploadForm, "description");
 
-        // Autores e Tags vêm como listas ou strings separadas.
-        // Simplificação: vamos assumir que vêm separadas por vírgulas ou várias partes.
-        // Aqui assumo que o frontend envia várias vezes a mesma key ou separado por vírgula
         List<String> tags = getListValue(uploadForm, "tags");
         List<String> authors = getListValue(uploadForm, "authors");
 
@@ -103,35 +97,11 @@ public class PublicationService {
         String fileName = "unknown.pdf";
 
         if (fileParts != null && !fileParts.isEmpty()) {
-            InputPart filePart = fileParts.get(0); // Assume 1 ficheiro
-            // Truque para sacar o nome do ficheiro (Ficha 9)
+            InputPart filePart = fileParts.get(0);
             fileName = getFileName(filePart.getHeaders());
             fileContent = filePart.getBody(InputStream.class, null);
         }
         publicationBean.create(title, scientificArea, description, authors, type, uploaderUsername, tags, fileName, fileContent);
-
-        return Response.status(Response.Status.CREATED).build();
-    }
-
-    @GET
-    @Path("/{id}/comentarios")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getPublicationComments(@PathParam("id") long publicationId) throws MyEntityNotFoundException {
-        List<Comment> comments = commentBean.getComments(publicationId);
-        // Aqui usamos o CommentDTO "rico" (com nome do autor) para a lista pública
-        return Response.ok(CommentDTO.from(comments)).build();
-    }
-
-    // 2. ADICIONAR COMENTÁRIO
-    @POST
-    @Path("/{id}/comentarios")
-    @Authenticated
-    @Consumes(MediaType.APPLICATION_JSON)
-    public Response addComment(@PathParam("id") long publicationId, CommentDTO dto) throws MyEntityNotFoundException {
-        String username = securityContext.getUserPrincipal().getName();
-
-        // O Bean trata de criar a entidade e associar o User/Pub
-        commentBean.create(publicationId, username, dto.getContent());
 
         return Response.status(Response.Status.CREATED).build();
     }
@@ -145,7 +115,7 @@ public class PublicationService {
         return null;
     }
 
-    // Extrai listas (ex: tags enviadas várias vezes ou separadas por virgula)
+    // Extrai listas
     private List<String> getListValue(Map<String, List<InputPart>> uploadForm, String key) throws IOException {
         List<String> result = new ArrayList<>();
         List<InputPart> parts = uploadForm.get(key);
@@ -181,37 +151,17 @@ public class PublicationService {
     @Produces(MediaType.APPLICATION_OCTET_STREAM) // Indica que é um ficheiro binário
     public Response downloadFile(@PathParam("id") long id) throws MyEntityNotFoundException {
 
-        // 1. Buscar a publicação para saber o nome original (ex: "relatorio.pdf")
+        // Buscar a publicação para saber o nome original
         Publication publication = publicationBean.findOrFail(id);
 
-        // 2. Buscar o ficheiro físico
+        // Buscar o ficheiro físico
         File file = publicationBean.getFile(id);
 
-        // 3. Construir a resposta com o Header "Content-Disposition"
-        // Isto obriga o browser a abrir a janela de "Guardar como..." com o nome correto
         return Response.ok(file)
                 .header("Content-Disposition", "attachment; filename=\"" + publication.getFilename() + "\"")
                 .build();
     }
 
-    //todo: ISTO PODE SER?
-    @DELETE
-    @Path("/{id}")
-    public Response deletePublication(@PathParam("id") long id) throws MyEntityNotFoundException {
-        //obter publicacao para obter uploader
-        var publication = publicationBean.findOrFail(id);
-
-        //obter user que fez o pedido
-        String username = securityContext.getUserPrincipal().getName();
-
-        //verificar permissao para apagar
-        if(!username.equals(publication.getUploader().getUsername()) && !securityContext.isUserInRole("ADMINISTRATOR")){
-            return Response.status(Response.Status.FORBIDDEN).entity("Não pode apagar esta publicação").build();
-        }
-
-        publicationBean.delete(id);
-        return Response.ok().build();
-    }
 
     @PUT
     @Path("/{id}")
@@ -230,6 +180,7 @@ public class PublicationService {
 
     @GET
     @Path("/{id}/historico")
+    @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
     @Produces(MediaType.APPLICATION_JSON)
     public Response getPublicationHistory(@PathParam("id") long id) throws MyEntityNotFoundException {
         var historyList = publicationBean.getHistory(id);
@@ -244,19 +195,26 @@ public class PublicationService {
     //associar tag
     @POST
     @Path("/{id}/tags")
+    @Consumes(MediaType.APPLICATION_JSON)
     public Response addTagToPublication(@PathParam("id") long id, TagDTO tagDto)
             throws MyEntityNotFoundException {
+
+        String username = securityContext.getUserPrincipal().getName();
+        Publication publication = publicationBean.findOrFail(id);
+        if(!publication.getUploader().getUsername().equals(username) && !securityContext.isUserInRole("ADMINISTRATOR") && !securityContext.isUserInRole("RESPONSIBLE")){
+            return Response.status(Response.Status.FORBIDDEN).build();
+        }
 
         publicationBean.addTag(id, tagDto.getName());
         return Response.ok().build();
     }
 
     @DELETE
-    @Path("/{id}/tags/{tagName}")
-    public Response removeTagFromPublication(@PathParam("id") long id, @PathParam("tagName") String tagName)
+    @Path("/{pubid}/tags/{tagid}")
+    public Response removeTagFromPublication(@PathParam("pubid") long id, @PathParam("tagid") long tagId)
             throws MyEntityNotFoundException {
 
-        publicationBean.removeTag(id, tagName);
+        publicationBean.removeTag(id, tagId);
         return Response.ok().build();
     }
 

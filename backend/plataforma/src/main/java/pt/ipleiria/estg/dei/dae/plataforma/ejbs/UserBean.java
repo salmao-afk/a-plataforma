@@ -87,6 +87,9 @@ public class UserBean {
         em.remove(user);
     }
 
+    public List<UserDTO> getAllUsers() {
+        return UserDTO.fromUsers(findAll());
+    }
     //suspender um user
     public void suspend(String username, String motive) throws MyEntityNotFoundException {
         if(motive == null || motive.isEmpty()){
