@@ -36,7 +36,7 @@ async function submitUpload() {
 
       <div class="grid grid-cols-2 gap-4">
         <div><label class="block font-bold text-sm">Área</label><input v-model="form.scientificArea" required class="w-full border p-2 rounded" /></div>
-        <div><label class="block font-bold text-sm">Tipo</label><select v-model="form.type" class="w-full border p-2 rounded bg-white"><option>Article</option><option>Thesis</option></select></div>
+        <div><label class="block font-bold text-sm">Tipo</label><select v-model="form.type" class="w-full border p-2 rounded bg-white"><option>Artigo</option><option>Tese</option></select></div>
       </div>
 
       <div><label class="block font-bold text-sm">Descrição</label><textarea v-model="form.description" rows="3" class="w-full border p-2 rounded"></textarea></div>
