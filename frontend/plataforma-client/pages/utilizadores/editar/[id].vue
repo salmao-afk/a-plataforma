@@ -60,6 +60,7 @@ onMounted(async () => {
 });
 
 // --- GUARDAR ---
+// --- GUARDAR ---
 async function handleSubmit() {
     feedback.value = "";
     isError.value = false;
@@ -69,7 +70,13 @@ async function handleSubmit() {
         await $fetch(`${api}/utilizadores/${userId}`, {
             method: "PUT",
             headers: { Authorization: `Bearer ${authStore.token}` },
-            body: { name: formData.name, email: formData.email }
+            // ALTERAÇÃO AQUI: Envolver 'name' e 'email' num objeto 'user'
+            body: {
+                user: {
+                    name: formData.name,
+                    email: formData.email
+                }
+            }
         });
 
         // 2. Atualizar Role (PATCH) - SÓ SE MUDOU
@@ -77,13 +84,11 @@ async function handleSubmit() {
             await $fetch(`${api}/utilizadores/${userId}/role`, {
                 method: "PATCH",
                 headers: { Authorization: `Bearer ${authStore.token}` },
-                body: { role: formData.role } // Envia 'ADMINISTRATOR', etc.
+                body: { role: formData.role }
             });
         }
 
         feedback.value = "Utilizador atualizado com sucesso!";
-
-        // Redireciona para a lista de utilizadores
         setTimeout(() => router.push(`/utilizadores`), 1000);
 
     } catch (e: any) {

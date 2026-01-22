@@ -79,10 +79,8 @@ function formatDisplayDate(dateInput) {
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0'); // Mês começa em 0
     const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
 
-    // Retorna string forçada: "22/01/2026 às 14:30"
+    // Retorna string forçada: "22/01/2026 "
     return `${day}/${month}/${year} `;
 }
 
@@ -148,11 +146,11 @@ async function loadHistory() {
             allActivities.value = results.filter(r => r !== null);
         }
 
-        // 2. USER: Vê o seu (Endpoint atualizado)
+        // 2. USER: Vê o seu próprio
         else {
             const myUsername = authStore.user.username;
 
-            // USANDO O ENDPOINT QUE PEDISTE
+
             const myActivity = await $fetch(`${api}/utilizadores/me/atividade`, {
                 headers: { Authorization: `Bearer ${authStore.token}` }
             });
