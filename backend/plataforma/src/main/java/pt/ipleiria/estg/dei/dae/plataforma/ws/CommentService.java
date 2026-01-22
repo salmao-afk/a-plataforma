@@ -9,8 +9,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.CommentDTO;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.CommentUserDTO;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.CommentVisibilityDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.CommentBean;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Comment;
 import pt.ipleiria.estg.dei.dae.plataforma.security.Authenticated;
@@ -54,7 +52,10 @@ public class CommentService {
     @Path("/{commentId}/visibilidade")
     @PUT
     @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
-    public Response toggleVisibility( @PathParam("commentId") long commentId, @Valid CommentVisibilityDTO dto) throws MyEntityNotFoundException{
+    public Response toggleVisibility( @PathParam("commentId") long commentId, CommentDTO dto) throws MyEntityNotFoundException{
+        if(dto.isHidden() == null){
+            throw new IllegalArgumentException("Necessita de alterar algum campo(hidden)!");
+        }
         String username = securityContext.getUserPrincipal().getName();
 
         commentBean.toggleVisibility(commentId, username, dto.isHidden(), dto.getHideReason());

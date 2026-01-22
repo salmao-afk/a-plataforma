@@ -17,16 +17,20 @@ public class UserDTO implements Serializable {
     private String name;
     private List<TagDTO> subscribedTags;
     private UserRole role;
+    Boolean active;
+    String statusReason;
 
     public UserDTO() {
     }
 
-    public UserDTO(String username, String email, String name, List<TagDTO> subscribedTags, UserRole role) {
+    public UserDTO(String username, String email, String name, List<TagDTO> subscribedTags, UserRole role, Boolean active, String statusReason) {
         this.username = username;
         this.email = email;
         this.name = name;
         this.subscribedTags = subscribedTags;
         this.role = role;
+        this.active = active;
+        this.statusReason = statusReason;
     }
 
     public String getUsername() {
@@ -85,6 +89,22 @@ public class UserDTO implements Serializable {
         subscribedTags.remove(tag);
     }
 
+    public Boolean isActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
+    }
+
+    public String getStatusReason() {
+        return statusReason;
+    }
+
+    public void setStatusReason(String statusReason) {
+        this.statusReason = statusReason;
+    }
+
     public static UserDTO fromUser(User user) {
         return new UserDTO(
                 user.getUsername(),
@@ -95,7 +115,9 @@ public class UserDTO implements Serializable {
                         user.getSubscribedTags().stream()
                                 .map(tag -> new TagDTO(tag.getId(), tag.getName(), tag.getDescription())) // Mapeia para objeto com ID
                                 .collect(Collectors.toList()),
-                user.getRole()
+                user.getRole(),
+                user.isActive(),
+                user.getStatusReason()
         );
     }
 

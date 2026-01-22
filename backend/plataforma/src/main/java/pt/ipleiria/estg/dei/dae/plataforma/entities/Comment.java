@@ -52,7 +52,7 @@ public class Comment extends Versionable implements Serializable {
     private User author;
 
     @Column(nullable = false)
-    private boolean hidden = false;
+    private Boolean hidden = false;
 
     private String hideReason;
 
@@ -106,11 +106,11 @@ public class Comment extends Versionable implements Serializable {
         this.author = author;
     }
 
-    public boolean isHidden() {
+    public Boolean isHidden() {
         return hidden;
     }
 
-    public void setHidden(boolean hidden) {
+    public void setHidden(Boolean hidden) {
         this.hidden = hidden;
     }
 

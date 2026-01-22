@@ -88,10 +88,10 @@ public class UserService {
     @Path("/{username}")
     @RolesAllowed({"ADMINISTRATOR"})
     public Response updateUser(@PathParam("username") String username, UserProfileDTO dto) throws MyEntityNotFoundException {
-        if(dto.getEmail() == null && dto.getName() == null){
+        if(dto.getUser().getEmail() == null && dto.getUser().getName() == null){
             throw new IllegalArgumentException("Necessita de alterar algum campo(email ou nome)!");
         }
-        userBean.update(username, dto.getEmail(), dto.getName());
+        userBean.update(username, dto.getUser().getEmail(), dto.getUser().getName());
         User user = userBean.findOrFail(username);
         var publicacoes = publicationBean.findUserPublications(username);
         var comentarios = commentBean.getUserComments(username);
@@ -100,8 +100,7 @@ public class UserService {
                 user,
                 publicacoes,
                 comentarios,
-                ratings,
-                user.getSubscribedTags()
+                ratings
         );
 
         return Response.ok(responseDTO).build();
@@ -124,7 +123,10 @@ public class UserService {
     @PATCH
     @Path("/{username}/estado")
     @RolesAllowed({"ADMINISTRATOR"})
-    public Response suspendUser(@PathParam("username") String username,@Valid UserStatusDTO dto) throws MyEntityNotFoundException {
+    public Response suspendUser(@PathParam("username") String username,UserDTO dto) throws MyEntityNotFoundException {
+        if(dto.isActive() == null){
+            throw new IllegalArgumentException("Necessita de alterar algum campo(active)!");
+        }
         if(dto.isActive()){
             userBean.activate(username);
         }
@@ -141,7 +143,10 @@ public class UserService {
     @PATCH
     @Path("/{username}/role")
     @RolesAllowed({"ADMINISTRATOR"})
-    public Response changeUserRole(@PathParam("username") String username,@Valid UserRoleDTO dto) throws MyEntityNotFoundException {
+    public Response changeUserRole(@PathParam("username") String username, UserDTO dto) throws MyEntityNotFoundException {
+        if(dto.getRole() == null){
+            throw new IllegalArgumentException("Necessita de alterar algum campo(role)!");
+        }
         userBean.changeRole(username, dto.getRole());
         Map<String, String> response = new HashMap<>();
         response.put("mensagem", "Role do utilizador alterado com sucesso");
@@ -182,8 +187,6 @@ public class UserService {
         return Response.ok(List.of(dto)).build();
     }
 
-    // ... outros métodos ...
-
     // --- ADICIONE ESTE MÉTODO NO FINAL DA CLASSE UserService ---
     // Este método junta as peças todas (User + Publicações + Comentários + Ratings)
     private UserProfileDTO buildCompleteUserProfile(String username) throws MyEntityNotFoundException {
@@ -202,8 +205,7 @@ public class UserService {
                 user,
                 publicacoes,
                 comentarios,
-                ratings,
-                user.getSubscribedTags()
+                ratings
         );
     }
 
@@ -213,7 +215,7 @@ public class UserService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response updateMyProfile(UserProfileDTO dto) throws MyEntityNotFoundException {
         String username = securityContext.getUserPrincipal().getName();
-        userBean.update(username, dto.getEmail(), dto.getName());
+        userBean.update(username, dto.getUser().getEmail(), dto.getUser().getName());
         User user = userBean.findOrFail(username);
         var publicacoes = publicationBean.findUserPublications(username);
         var comentarios = commentBean.getUserComments(username);
@@ -222,8 +224,7 @@ public class UserService {
                 user,
                 publicacoes,
                 comentarios,
-                ratings,
-                user.getSubscribedTags()
+                ratings
         );
 
         return Response.ok(responseDTO).build();
