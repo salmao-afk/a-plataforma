@@ -35,7 +35,7 @@ public class AuthService {
     private UserBean userBean;
     @POST
     @Path("/login")
-    public Response authenticate(@Valid AuthDTO auth) {
+    public Response authenticate(@Valid AuthDTO auth) throws MyEntityNotFoundException{
         if (userBean.canLogin(auth.getUsername(), auth.getPassword())) {
             String token = TokenIssuer.issue(auth.getUsername());
             return Response.ok(Collections.singletonMap("token", token)).build();
