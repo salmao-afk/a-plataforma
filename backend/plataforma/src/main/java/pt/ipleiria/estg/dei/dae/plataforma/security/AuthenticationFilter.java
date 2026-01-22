@@ -8,12 +8,10 @@ import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.HttpHeaders;
-import jakarta.ws.rs.core.SecurityContext;
-import jakarta.ws.rs.core.UriInfo;
+import jakarta.ws.rs.core.*;
 import jakarta.ws.rs.ext.Provider;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.UserBean;
+import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.security.Principal;
@@ -32,9 +30,27 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             throw new
                     NotAuthorizedException("Authorization header must be provided");
         }
-        // Get token from the HTTP Authorization header
         String token = header.substring("Bearer".length()).trim();
         var user = userBean.find(getUsername(token));
+        try {
+            if (user == null) {
+                requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED).build());
+                return;
+            }
+
+            if (!user.isActive()) {
+                requestContext.abortWith(Response.status(Response.Status.FORBIDDEN)
+                        .entity("User com conta suspensa, fale com um administrador para ativar a conta.")
+                        .type(MediaType.APPLICATION_JSON)
+                        .build());
+                return;
+            }
+
+        } catch (Exception e) {
+            requestContext.abortWith(Response.status(Response.Status.INTERNAL_SERVER_ERROR).build());
+        }
+        // Get token from the HTTP Authorization header
+
         requestContext.setSecurityContext(new SecurityContext() {
             @Override
             public Principal getUserPrincipal() {
