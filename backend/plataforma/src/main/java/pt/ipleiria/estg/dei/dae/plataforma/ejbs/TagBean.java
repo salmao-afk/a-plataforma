@@ -4,6 +4,7 @@ import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
+import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityExistsException;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 
@@ -73,4 +74,24 @@ public class TagBean {
         }
     }
 
+
+    public void subscribe(long tagCode, String username) {
+        Tag tag = em.find(Tag.class, tagCode);
+        User user = em.find(User.class, username);
+
+        if (tag != null && user != null) {
+            tag.addSubscriber(user);
+            // Não precisas de em.persist porque as entidades estão "managed".
+            // O commit da transação tratará de guardar na tabela de junção.
+        }
+    }
+
+    public void unsubscribe(long tagCode, String username) {
+        Tag tag = em.find(Tag.class, tagCode);
+        User user = em.find(User.class, username);
+
+        if (tag != null && user != null) {
+            tag.removeSubscriber(user);
+        }
+    }
 }

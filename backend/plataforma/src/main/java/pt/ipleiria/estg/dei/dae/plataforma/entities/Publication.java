@@ -67,9 +67,11 @@ public class Publication extends Versionable implements Serializable {
     private User hiddenBy;
 
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.EAGER)
-    @JoinTable(name = "publications_tags",
-            joinColumns = @JoinColumn(name = "publication_id"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id"))
+    @JoinTable(
+            name = "publications_tags",
+            joinColumns = @JoinColumn(name = "publication_id", referencedColumnName = "id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id", referencedColumnName = "id")
+    )
     private List<Tag> tags = new ArrayList<>();
 
     @OneToMany(mappedBy = "publication", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY) //do I need cascade and fetch?

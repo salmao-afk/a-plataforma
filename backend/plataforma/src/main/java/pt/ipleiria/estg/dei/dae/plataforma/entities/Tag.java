@@ -19,15 +19,22 @@ import java.util.Objects;
 public class Tag extends Versionable implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private long id; // Agora é ID numérico!
 
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     private String name;
 
+    // Relação 1: PUBLICAÇÕES (Passiva - a Publicação manda)
     @ManyToMany(mappedBy = "tags")
     private List<Publication> publications = new ArrayList<>();
 
-    @ManyToMany(mappedBy = "subscribedTags")
+    // Relação 2: SUBSCRITORES (Ativa - a Tag manda e cria a tabela)
+    @ManyToMany
+    @JoinTable(
+            name = "tags_subscribers",
+            joinColumns = @JoinColumn(name = "tag_id", referencedColumnName = "id"),
+            inverseJoinColumns = @JoinColumn(name = "user_username", referencedColumnName = "username")
+    )
     private List<User> subscribers = new ArrayList<>();
 
     //private User creator;
@@ -81,16 +88,17 @@ public class Tag extends Versionable implements Serializable {
     }
 
     public void addSubscriber(User user) {
-        subscribers.add(user);
+        this.subscribers.add(user);
+    }
+
+    public void removeSubscriber(User user) {
+        subscribers.remove(user);
     }
 
     public void removePublication(Publication publication) {
         publications.remove(publication);
     }
 
-    public void removeSubscriber(User user) {
-        subscribers.remove(user);
-    }
 
     public String getDescription() {
         return description;

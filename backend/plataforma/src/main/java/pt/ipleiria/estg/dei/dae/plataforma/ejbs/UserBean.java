@@ -211,17 +211,14 @@ public class UserBean {
             throw new MyEntityNotFoundException("Tag não encontrada.");
         }
 
-        // 1. A tal verificação (agora funciona graças ao Passo 1)
-        if (user.getSubscribedTags().contains(tag)) {
-            // Podes lançar erro ou simplesmente ignorar
+        // Verificacao de repeticao
+        if (tag.getSubscribers().contains(user)) {
             throw new IllegalArgumentException("Tag já subscrita");
         }
 
-        // 2. Adicionar e Gravar
+        // Adicionar e Gravar
+        tag.addSubscriber(user);
         user.addSubscribedTag(tag);
-
-        // Importante: Forçar a gravação na tabela de junção
-        em.merge(user);
     }
 
     public void unsubscribeTag(String username, long tagId) throws MyEntityNotFoundException {
@@ -229,6 +226,7 @@ public class UserBean {
         Tag tag = em.find(Tag.class, tagId);
 
         if (tag != null) {
+            tag.removeSubscriber(user);
             user.removeSubscribedTag(tag);
         }
     }
