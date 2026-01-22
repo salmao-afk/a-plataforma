@@ -33,12 +33,15 @@ public class ConfigBean {
                     "user1@ipleiria.pt",
                     UserRole.COLLABORATOR
             );
-            // Criar outros users de teste para a defesa
-            // ...
-
+            userBean.create(
+                    "EduResponsavel",
+                    "123", // Será feito hash dentro do create
+                    "EduMuitoResponsavel",
+                    "eduGamer@ipleiria.pt",
+                    UserRole.RESPONSIBLE
+            );
 
         } catch (Exception e) {
-            // Ignora erro se já existirem (para não dar erro ao reiniciar o Docker)
         }
     }
 }

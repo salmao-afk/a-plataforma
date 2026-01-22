@@ -37,3 +37,8 @@ monitor: deploy logs
 
 mails:
 	docker compose exec --workdir /var/mail smtp bash
+
+setup-ai:
+	@echo "IA YA a instalar..."
+	docker exec -it ollama ollama run tinyllama
+	@echo "Instalação concluída! A IA está pronta."
