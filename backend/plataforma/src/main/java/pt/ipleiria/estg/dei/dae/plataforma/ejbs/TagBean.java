@@ -2,7 +2,9 @@ package pt.ipleiria.estg.dei.dae.plataforma.ejbs;
 
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
+import pt.ipleiria.estg.dei.dae.plataforma.dtos.TagDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityExistsException;
@@ -41,6 +43,22 @@ public class TagBean {
         }
         return em.find(Tag.class, id);
     }
+
+    public String getTagName(Tag tag) throws MyEntityNotFoundException {
+        Tag tagFind = findOrFail(tag.getId());
+        return tagFind.getName();
+    }
+
+    public Tag findByName(String tagName) throws NoResultException {
+        try {
+            return em.createQuery("SELECT t FROM Tag t WHERE t.name = :name", Tag.class)
+                    .setParameter("name", tagName)
+                    .getSingleResult();
+        } catch (NoResultException e) {
+            throw new IllegalArgumentException("A tag '" + tagName + "' não existe. Por favor use apenas tags existentes.");
+        }
+    }
+
 
     public void delete(long id) throws MyEntityNotFoundException {
         if(em.find(Tag.class, id) == null){
