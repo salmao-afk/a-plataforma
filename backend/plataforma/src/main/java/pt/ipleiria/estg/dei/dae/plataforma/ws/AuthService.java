@@ -9,12 +9,10 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.AuthDTO;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.EmailDTO;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.NewPasswordDTO;
-import pt.ipleiria.estg.dei.dae.plataforma.dtos.UserDTO;
+import pt.ipleiria.estg.dei.dae.plataforma.dtos.*;
 import pt.ipleiria.estg.dei.dae.plataforma.ejbs.UserBean;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
+import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 import pt.ipleiria.estg.dei.dae.plataforma.security.Authenticated;
 import pt.ipleiria.estg.dei.dae.plataforma.security.TokenIssuer;
 
@@ -89,6 +87,25 @@ public class AuthService {
             }
             return Response.status(Response.Status.BAD_REQUEST).entity(errorMsg).build();
         }
+    }
+
+    @PUT
+    @Authenticated
+    @Path("/alterar-password")
+    public Response changePassword(@Valid PasswordDTO dto) throws MyEntityNotFoundException {
+        String username = securityContext.getUserPrincipal().getName();
+        userBean.updatePassword(
+                    username,
+                    dto.getOldPassword(),
+                    dto.getNewPassword(),
+                    dto.getConfirmPassword()
+        );
+
+            return Response.ok()
+                    .entity("{\"mensagem\": \"Palavra-passe alterada com sucesso\"}")
+                    .build();
+
+
     }
 
 }

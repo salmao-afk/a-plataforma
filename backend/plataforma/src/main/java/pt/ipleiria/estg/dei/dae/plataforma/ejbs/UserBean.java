@@ -268,4 +268,18 @@ public class UserBean {
         user.setResetToken(null);
         user.setTokenExpiry(null);
     }
+
+    public void updatePassword(String username, String oldPassword, String newPassword, String confirmPassword) throws MyEntityNotFoundException {
+        User user = findOrFail(username);
+        if (!Hasher.verify(oldPassword, user.getPassword())) {
+            throw new IllegalArgumentException("Password incorreta.");
+        }
+        if(!newPassword.equals(confirmPassword) || newPassword.isEmpty()){
+            throw new IllegalArgumentException("A nova password e a confirmação não coincidem.");
+        }
+        if(newPassword.equals(oldPassword)){
+            throw new IllegalArgumentException("A nova password não pode ser igual à antiga.");
+        }
+        user.setPassword(Hasher.hash(newPassword));
+    }
 }

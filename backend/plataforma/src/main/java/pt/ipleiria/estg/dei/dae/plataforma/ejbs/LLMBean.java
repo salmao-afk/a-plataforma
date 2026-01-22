@@ -13,15 +13,14 @@ import java.nio.charset.StandardCharsets;
 @Stateless
 public class LLMBean {
 
-    // No Docker Compose, o nome do serviço é o hostname
     private static final String OLLAMA_URL = "http://ollama:11434/api/generate";
-    private static final String MODEL = "llama3";
+    private static final String MODEL = System.getenv("LLM_MODEL") != null ? System.getenv("LLM_MODEL") : "tinyllama";
 
     public String generateSummary(String textContent) throws IOException {
         String cleanText = textContent.replace("\"", "'").replace("\n", " ");
         if (cleanText.length() > 6000) cleanText = cleanText.substring(0, 6000);
 
-        String prompt = "Faz um resumo conciso em Português, máx 3 parágrafos: " + cleanText;
+        String prompt = "Faz um resumo conciso em PORTUGUÊS, máximo 250 palavras: " + cleanText;
         String jsonBody = String.format("{\"model\": \"%s\", \"prompt\": \"%s\", \"stream\": false}", MODEL, prompt);
 
         System.out.println(">>>A TENTAR LIGAR AO OLLAMA: " + OLLAMA_URL);
