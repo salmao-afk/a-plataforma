@@ -160,15 +160,12 @@ public class PublicationBean {
 
     // Método essencial para a Barra de Pesquisa do Frontend funcionar
     public List<Publication> findAllWithFilters(String area, String tagsStr, Boolean hidden, boolean isAdmin) {
-        // Construção dinâmica da Query em Texto (Mais fácil de controlar)
         StringBuilder queryStr = new StringBuilder("SELECT DISTINCT p FROM Publication p");
-
-        // Se houver filtro de tag, fazemos logo o JOIN para filtrar
         if (tagsStr != null && !tagsStr.isEmpty()) {
             queryStr.append(" JOIN p.tags t");
         }
 
-        queryStr.append(" WHERE 1=1"); // Truque para facilitar adicionar 'AND' depois
+        queryStr.append(" WHERE 1=1");
 
         // Filtro de Área Científica
         if (area != null && !area.isEmpty()) {
@@ -176,7 +173,6 @@ public class PublicationBean {
         }
 
         // Filtro de Tag (AQUI ESTÁ A CORREÇÃO)
-        // Usamos 'JOIN' (Inner Join) acima, por isso só devolve publicações que tenham a tag
         if (tagsStr != null && !tagsStr.isEmpty()) {
             queryStr.append(" AND t.name = :tagName");
         }

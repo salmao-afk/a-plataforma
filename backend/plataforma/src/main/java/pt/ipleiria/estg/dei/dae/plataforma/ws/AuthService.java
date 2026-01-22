@@ -53,24 +53,13 @@ public class AuthService {
         if (request.getSession(false) != null) {
             request.getSession().invalidate();
         }
-        return Response.ok("{\"mensagem\": \"Logout efetuado com sucesso\"}").build();
+        return Response.ok("Logout efetuado com sucesso").build();
     }
-
-    @GET
-    @Authenticated
-    @Path("/user")
-    public Response getAuthenticatedUser() {
-        var username = securityContext.getUserPrincipal().getName();
-        var user = userBean.find(username);
-        return Response.ok(UserDTO.fromUser(user)).build();
-    }
-
 
     @POST
     @Path("/esqueci-password")
     public Response forgotPassword(EmailDTO dto) {
         userBean.sendPasswordResetEmail(dto.getEmail());
-
         return Response.ok("Se o email existir, as instruções foram enviadas.").build();
     }
 
@@ -102,7 +91,7 @@ public class AuthService {
         );
 
             return Response.ok()
-                    .entity("{\"mensagem\": \"Palavra-passe alterada com sucesso\"}")
+                    .entity("Palavra-passe alterada com sucesso")
                     .build();
 
 

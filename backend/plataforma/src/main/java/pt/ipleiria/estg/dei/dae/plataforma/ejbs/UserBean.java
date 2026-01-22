@@ -25,8 +25,11 @@ public class UserBean {
 
     @EJB
     private EmailBean emailBean;
+    @EJB
     private PublicationBean publicationBean;
+    @EJB
     private CommentBean commentBean;
+    @EJB
     private RatingBean ratingBean;
 
     //TODO: throw exception
@@ -84,6 +87,9 @@ public class UserBean {
         em.remove(user);
     }
 
+    public List<UserDTO> getAllUsers() {
+        return UserDTO.fromUsers(findAll());
+    }
     //suspender um user
     public void suspend(String username, String motive) throws MyEntityNotFoundException {
         if(motive == null || motive.isEmpty()){

@@ -45,7 +45,7 @@ public class PublicationService {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public List<PublicationDTO> getAllPublications(
-            @QueryParam("tags") String tags, // <--- OBRIGATÓRIO TER ISTO
+            @QueryParam("tags") String tags,
             @QueryParam("area") String area
     ) {
         // Se o frontend enviar ?tags=Java, entra aqui
@@ -92,9 +92,6 @@ public class PublicationService {
         String scientificArea = getTextValue(uploadForm, "scientificArea");
         String description = getTextValue(uploadForm, "description");
 
-        // Autores e Tags vêm como listas ou strings separadas.
-        // Simplificação: vamos assumir que vêm separadas por vírgulas ou várias partes.
-        // Aqui assumo que o frontend envia várias vezes a mesma key ou separado por vírgula
         List<String> tags = getListValue(uploadForm, "tags");
         List<String> authors = getListValue(uploadForm, "authors");
 
@@ -118,7 +115,6 @@ public class PublicationService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getPublicationComments(@PathParam("id") long publicationId) throws MyEntityNotFoundException {
         List<Comment> comments = commentBean.getComments(publicationId);
-        // Aqui usamos o CommentDTO "rico" (com nome do autor) para a lista pública
         return Response.ok(CommentDTO.from(comments)).build();
     }
 
