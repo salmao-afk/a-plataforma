@@ -46,11 +46,7 @@ public class User extends Versionable implements Serializable {
 
     private String statusReason;
 
-    
-    @ManyToMany
-    @JoinTable(name = "users_subscriptions",
-            joinColumns = @JoinColumn(name = "username"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id"))
+    @ManyToMany(mappedBy = "subscribers")
     private List<Tag> subscribedTags = new ArrayList<>();
 
     @OneToMany(mappedBy = "uploader", cascade = CascadeType.REMOVE)

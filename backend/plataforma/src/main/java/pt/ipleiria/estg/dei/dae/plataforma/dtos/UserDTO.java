@@ -15,7 +15,7 @@ public class UserDTO implements Serializable {
     private String email;
     private String password;
     private String name;
-    private List<String> subscribedTags = new ArrayList<>();
+    private List<TagDTO> subscribedTags;
     private UserRole role;
     Boolean active;
     String statusReason;
@@ -23,7 +23,7 @@ public class UserDTO implements Serializable {
     public UserDTO() {
     }
 
-    public UserDTO(String username, String email, String name, List<String> subscribedTags, UserRole role, Boolean active, String statusReason) {
+    public UserDTO(String username, String email, String name, List<TagDTO> subscribedTags, UserRole role, Boolean active, String statusReason) {
         this.username = username;
         this.email = email;
         this.name = name;
@@ -73,19 +73,19 @@ public class UserDTO implements Serializable {
         this.role = role;
     }
 
-    public List<String> getSubscribedTags() {
+    public List<TagDTO> getSubscribedTags() {
         return subscribedTags;
     }
 
-    public void setSubscribedTags(List<String> subscribedTags) {
+    public void setSubscribedTags(List<TagDTO> subscribedTags) {
         this.subscribedTags = subscribedTags;
     }
 
-    public void addSubscribedTag(String tag) {
+    public void addSubscribedTag(TagDTO tag) {
         subscribedTags.add(tag);
     }
 
-    public void removeSubscribedTag(String tag) {
+    public void removeSubscribedTag(TagDTO tag) {
         subscribedTags.remove(tag);
     }
 
@@ -111,7 +111,10 @@ public class UserDTO implements Serializable {
                 user.getEmail(),
                 user.getName(),
                 // Converte a lista de Entidades Tag para lista de Strings (nomes das tags)
-                user.getSubscribedTags() == null ? new ArrayList<>() : user.getSubscribedTags().stream().map(Tag::getName).collect(Collectors.toList()),
+                user.getSubscribedTags() == null ? new ArrayList<>() :
+                        user.getSubscribedTags().stream()
+                                .map(tag -> new TagDTO(tag.getId(), tag.getName(), tag.getDescription())) // Mapeia para objeto com ID
+                                .collect(Collectors.toList()),
                 user.getRole(),
                 user.isActive(),
                 user.getStatusReason()
