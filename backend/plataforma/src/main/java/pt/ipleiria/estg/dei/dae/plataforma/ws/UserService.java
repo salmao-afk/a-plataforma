@@ -175,6 +175,7 @@ public class UserService {
     //-----------------------------Dados Pessoais-----------------------------
     @GET
     @Path("/me")
+    @Authenticated
     @Produces(MediaType.APPLICATION_JSON)
     public Response getMyProfile() throws MyEntityNotFoundException {
         String username = securityContext.getUserPrincipal().getName();
@@ -212,6 +213,7 @@ public class UserService {
 
     @PUT
     @Path("/me")
+    @Authenticated
     @Produces(MediaType.APPLICATION_JSON)
     public Response updateMyProfile(UserProfileDTO dto) throws MyEntityNotFoundException {
         String username = securityContext.getUserPrincipal().getName();
@@ -232,6 +234,7 @@ public class UserService {
 
     @GET
     @Path("/me/ratings")
+    @Authenticated
     public Response getMyRatings() throws MyEntityNotFoundException{
         String username = securityContext.getUserPrincipal().getName();
         List<RatingDTO> ratings = ratingBean.getUserRatings(username).stream()
@@ -242,6 +245,7 @@ public class UserService {
 
     //obter comentarios do user que esta a fazer o pedido
     @Path("/me/comentarios")
+    @Authenticated
     @GET
     public Response getMyComments() throws MyEntityNotFoundException{
         //vai buscar o username do utilizador que faz o pedido
@@ -252,6 +256,7 @@ public class UserService {
     }
 
     @Path("/me/tags-subscritas")
+    @Authenticated
     @GET
     public Response getMyTags() throws MyEntityNotFoundException{
         String username = securityContext.getUserPrincipal().getName();
@@ -261,7 +266,7 @@ public class UserService {
 
     @GET
     @Path("/me/atividade")
-    @RolesAllowed({"ADMINISTRATOR"})
+    @Authenticated
     @Produces(MediaType.APPLICATION_JSON)
     public Response getMyActivity() throws MyEntityNotFoundException {
         String username = securityContext.getUserPrincipal().getName();

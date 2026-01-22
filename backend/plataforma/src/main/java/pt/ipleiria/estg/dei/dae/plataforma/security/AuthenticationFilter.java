@@ -40,9 +40,9 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
             if (!user.isActive()) {
                 requestContext.abortWith(Response.status(Response.Status.FORBIDDEN)
-                        .entity("User com conta suspensa, fale com um administrador para ativar a conta.")
-                        .type(MediaType.APPLICATION_JSON)
-                        .build());
+                    .entity("{\"erro\": \"Conta suspensa. Contacte o administrador.\"}")
+                    .type(MediaType.APPLICATION_JSON)
+                    .build());
                 return;
             }
 

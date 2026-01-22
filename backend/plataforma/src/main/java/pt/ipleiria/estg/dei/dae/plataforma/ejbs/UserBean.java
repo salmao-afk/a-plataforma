@@ -25,8 +25,11 @@ public class UserBean {
 
     @EJB
     private EmailBean emailBean;
+    @EJB
     private PublicationBean publicationBean;
+    @EJB
     private CommentBean commentBean;
+    @EJB
     private RatingBean ratingBean;
 
     //TODO: throw exception
