@@ -28,9 +28,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Stateless
 public class PublicationBean {
@@ -45,9 +43,11 @@ public class PublicationBean {
     @Resource
     private SessionContext ctx;
 
-
     @EJB
     private TagBean tagBean;
+
+    @EJB
+    private EmailBean emailBean;
 
     // Diretório de uploads na pasta do utilizador (funciona em Windows/Linux/Mac)
     // Mudamos para /tmp/uploads porque é garantido que o Linux/Docker deixa escrever lá
@@ -89,9 +89,21 @@ public class PublicationBean {
 
         // 3. Gestão de Tags
         List<Tag> tags = new ArrayList<>();
+        Set<User> usersToNotify = new HashSet<>();
+
         if(tagNames != null && !tagNames.isEmpty()){
             for (String tagName : tagNames) {
-                tags.add(findOrCreateTag(tagName.trim()));
+                // Obtém ou cria a tag (assumo que o teu findOrCreateTag devolve a entidade Tag)
+                Tag tag = findOrCreateTag(tagName.trim());
+                tags.add(tag);
+
+                //subscritores desta tag
+                for (User subscriber : tag.getSubscribers()) {
+                    //O próprio uploader não deve receber notificação
+                    if (!subscriber.getUsername().equals(uploaderUsername)) {
+                        usersToNotify.add(subscriber);
+                    }
+                }
             }
         }
         publication.setTags(tags);
@@ -103,6 +115,22 @@ public class PublicationBean {
 
         em.persist(publication);
         em.flush();
+
+        if (!usersToNotify.isEmpty()) {
+            System.out.println(">>> A enviar notificações para " + usersToNotify.size() + " utilizadores.");
+            for (User user : usersToNotify) {
+                emailBean.send(
+                        user.getEmail(),
+                        "Nova Publicação: " + title,
+                        "Olá " + user.getName() + ",\n\n" +
+                                "Foi submetida uma nova publicação com uma tag que segues.\n" +
+                                "Título: " + title + "\n" +
+                                "Área: " + scientificArea + "\n" +
+                                "Vem ver à plataforma!"
+                );
+            }
+        }
+
         if (filename != null) {
             PublicationBean myProxy = ctx.getBusinessObject(PublicationBean.class);
             myProxy.generateSummaryAsync(publication.getId());
