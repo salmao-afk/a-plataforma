@@ -40,7 +40,6 @@ public class Publication extends Versionable implements Serializable {
     @NotNull
     private String filepath;
 
-    // Relação: Muitas publicações, 1 User
     @ManyToOne
     @JoinColumn(name = "uploader_name", nullable = false)
     @NotNull

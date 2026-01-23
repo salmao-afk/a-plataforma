@@ -84,39 +84,18 @@ public class TagBean {
         return tag;
     }
 
-    // Método auxiliar para o PublicationBean usar
+    //Método auxiliar para o PublicationBean usar
     public Tag findByNameOrCreate(String name) {
         try {
-            // Tenta encontrar
+            //Tenta encontrar
             return em.createQuery("SELECT t FROM Tag t WHERE t.name = :name", Tag.class)
                     .setParameter("name", name)
                     .getSingleResult();
         } catch (Exception e) {
-            // Se não encontrar, cria uma nova
+            //Se não encontrar, cria uma nova
             Tag newTag = new Tag(name, "Gerada automaticamente");
             em.persist(newTag);
-            return newTag; // Retorna a tag já "gerida" pelo EntityManager
-        }
-    }
-
-
-    public void subscribe(long tagCode, String username) {
-        Tag tag = em.find(Tag.class, tagCode);
-        User user = em.find(User.class, username);
-
-        if (tag != null && user != null) {
-            tag.addSubscriber(user);
-            // Não precisas de em.persist porque as entidades estão "managed".
-            // O commit da transação tratará de guardar na tabela de junção.
-        }
-    }
-
-    public void unsubscribe(long tagCode, String username) {
-        Tag tag = em.find(Tag.class, tagCode);
-        User user = em.find(User.class, username);
-
-        if (tag != null && user != null) {
-            tag.removeSubscriber(user);
+            return newTag; //Retorna a tag já "gerida" pelo EntityManager
         }
     }
 

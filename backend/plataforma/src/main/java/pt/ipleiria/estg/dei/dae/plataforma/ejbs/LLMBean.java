@@ -20,7 +20,7 @@ public class LLMBean {
         String cleanText = textContent.replace("\"", "'").replace("\n", " ");
         if (cleanText.length() > 6000) cleanText = cleanText.substring(0, 6000);
 
-        String prompt = "Faz um resumo conciso em PORTUGUÊS, máximo 250 palavras: " + cleanText;
+        String prompt = "Quero que cries um resumo consiso em português de portugal, de no máximo 250 palavras sobre o texto que te estou a enviar: " + cleanText;
         String jsonBody = String.format("{\"model\": \"%s\", \"prompt\": \"%s\", \"stream\": false}", MODEL, prompt);
 
         System.out.println(">>>A TENTAR LIGAR AO OLLAMA: " + OLLAMA_URL);

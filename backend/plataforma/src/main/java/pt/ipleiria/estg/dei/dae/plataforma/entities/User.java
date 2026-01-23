@@ -27,7 +27,7 @@ public class User extends Versionable implements Serializable {
     private String username;
 
     @NotBlank
-    private String password; //TODO: hashable
+    private String password;
 
     @NotBlank
     @Email

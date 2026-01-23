@@ -22,11 +22,8 @@ public class CorsFilter implements ContainerRequestFilter, ContainerResponseFilt
 
     @Override
     public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) throws IOException {
-        // --- CORREÇÃO AQUI ---
-        // O '*' não funciona com Credentials=true. Tens de usar o endereço exato:
         responseContext.getHeaders().add("Access-Control-Allow-Origin", "http://localhost:3000");
 
-        // Mantém o resto como tinhas:
         responseContext.getHeaders().add("Access-Control-Allow-Credentials", "true");
         responseContext.getHeaders().add("Access-Control-Allow-Headers", "origin, content-type, accept, authorization");
         responseContext.getHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH");

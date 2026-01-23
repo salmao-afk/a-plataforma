@@ -32,7 +32,6 @@ public class UserBean {
     @EJB
     private RatingBean ratingBean;
 
-    //TODO: throw exception
     public void create(String username, String password, String name, String email, UserRole role){
         if(em.find(User.class, username) != null){
             throw new IllegalArgumentException("Username already exists");
@@ -148,7 +147,6 @@ public class UserBean {
     }
 
     //Profile do User
-    /*
     public UserProfileDTO getUserProfile(String username) throws MyEntityNotFoundException {
         //Vai buscar user com as tags carregadas
         User user = findOrFail(username);
@@ -163,12 +161,11 @@ public class UserBean {
                 user,
                 publicacoes,
                 comentarios,
-                ratings,
-                user.getSubscribedTags()
+                ratings
         );
         return dto;
     }
-    */
+
 
 
 
@@ -183,7 +180,7 @@ public class UserBean {
 
     public User findOrFail(String username) throws MyEntityNotFoundException {
         try {
-            // O "LEFT JOIN FETCH" obriga a carregar as tags imediatamente
+            //obriga a carregar as tags imediatamente
             return em.createQuery(
                             "SELECT u FROM User u LEFT JOIN FETCH u.subscribedTags WHERE u.username = :username",
                             User.class)
@@ -195,9 +192,6 @@ public class UserBean {
     }
 
     public List<User> findAll() {
-        // Usamos 'LEFT JOIN FETCH' para garantir que trazemos o user
-        // e as tags na mesma query.
-        // O 'LEFT' garante que users sem tags também aparecem.
         return em.createQuery(
                 "SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.subscribedTags",
                 User.class
@@ -249,10 +243,8 @@ public class UserBean {
             Date validade = Date.from(Instant.now().plusSeconds(86400));
             user.setTokenExpiry(validade);
 
-            em.flush(); // Força a escrita
+            em.flush();
 
-
-            //TODO: frontend trata do link real
             String link = "http://localhost:3000/auth/reset-password?token=" + token;
             emailBean.send(user.getEmail(), "Recuperar Password", "Token: " + token);
 

@@ -19,16 +19,14 @@ import java.util.Objects;
 public class Tag extends Versionable implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id; // Agora é ID numérico!
+    private long id;
 
     @Column(unique = true, nullable = false)
     private String name;
 
-    // Relação 1: PUBLICAÇÕES (Passiva - a Publicação manda)
     @ManyToMany(mappedBy = "tags")
     private List<Publication> publications = new ArrayList<>();
 
-    // Relação 2: SUBSCRITORES (Ativa - a Tag manda e cria a tabela)
     @ManyToMany
     @JoinTable(
             name = "tags_subscribers",
