@@ -23,11 +23,14 @@ public class PublicationDTO implements Serializable {
     private List<String> authors = new ArrayList<>();
     private String description;
     private String uploadDate;
+    private String hideReason;
+    private LocalDate hideDate;
+    private boolean visible;
 
     public PublicationDTO() {
     }
 
-    public PublicationDTO(long id, String title, String scientificArea, List<String> authors, String type, String description, String uploaderUsername, List<String> tags, String uploadDate) {
+    public PublicationDTO(long id, String title, String scientificArea, List<String> authors, String type, String description, String uploaderUsername, List<String> tags, String uploadDate, boolean visible, String hideReason, LocalDate hideDate) {
         this.id = id;
         this.title = title;
         this.scientificArea = scientificArea;
@@ -37,6 +40,10 @@ public class PublicationDTO implements Serializable {
         this.uploaderUsername = uploaderUsername;
         this.tags = tags;
         this.uploadDate = uploadDate;
+        this.visible = visible;
+        this.hideReason = hideReason;
+        this.hideDate = hideDate;
+
     }
 
     public long getId() { return id; }
@@ -75,9 +82,33 @@ public class PublicationDTO implements Serializable {
     public void setDescription(String description) {
         this.description = description;
     }
+
+//    public boolean isVisible() {
+//        return visible;
+//    }
+//
+//    public void setVisible(boolean visible) {
+//        this.visible = visible;
+//    }
+
+    public String getHideReason() {
+        return hideReason;
+    }
+
+    public void setHideReason(String hideReason) {
+        this.hideReason = hideReason;
+    }
+
+    public LocalDate getHideDate() {
+        return hideDate;
+    }
+
+    public void setHideDate(LocalDate hideDate) {
+        this.hideDate = hideDate;
+    }
+
     // --- Métodos de Conversão (Helpers) ---
 
-    // Converte de Entidade para DTO
     public static PublicationDTO from(Publication publication) {
         String dataFormatada = null;
         if (publication.getPublicationDate() != null) {
@@ -88,13 +119,16 @@ public class PublicationDTO implements Serializable {
                 publication.getId(),
                 publication.getTitle(),
                 publication.getScientificArea(),
-                publication.getAuthors(), //TODO: verificar se é null
+                publication.getAuthors(),
                 publication.getType(),
                 publication.getDescription(),
                 publication.getUploader().getUsername(),
                 publication.getTags() != null ? publication.getTags().stream().map(Tag::getName).collect(Collectors.toList()) :
                         new ArrayList<>(),
-                publication.getPublicationDate().toString()
+                publication.getPublicationDate().toString(),
+                publication.isVisible(),
+                publication.getHideReason(),
+                publication.getHideDate()
         );
     }
 
@@ -102,4 +136,5 @@ public class PublicationDTO implements Serializable {
     public static List<PublicationDTO> from(List<Publication> publications) {
         return publications.stream().map(PublicationDTO::from).collect(Collectors.toList());
     }
+
 }

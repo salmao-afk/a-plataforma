@@ -1,5 +1,6 @@
 package pt.ipleiria.estg.dei.dae.plataforma.ejbs;
 
+import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
@@ -10,6 +11,8 @@ import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityExistsException;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 
+import java.sql.Date;
+import java.time.Instant;
 import java.util.List;
 
 @Stateless
@@ -17,7 +20,8 @@ public class TagBean {
     @PersistenceContext
     private EntityManager em;
 
-
+    @EJB
+    UserBean userBean;
 
     public Tag create(String name, String description) throws MyEntityExistsException {
         long count = em.createQuery(
@@ -120,14 +124,22 @@ public class TagBean {
         }
     }
 
-    public void toggleVisibility(long tagId) throws MyEntityNotFoundException {
+    public void toggleVisibility(long tagId, String username, String hideReason) throws MyEntityNotFoundException {
         Tag tag = em.find(Tag.class, tagId);
 
         if (tag == null) {
             throw new MyEntityNotFoundException("Tag não encontrada com id: " + tagId);
         }
 
+        boolean estadoAntigo = tag.isVisible();
+
         tag.setVisible(!tag.isVisible());
+
+        if(estadoAntigo == true){
+            tag.setHideReason(hideReason);
+            tag.setHiddenBy(userBean.findOrFail(username));
+            tag.setHideDate(Date.from(Instant.now()));
+        }
         em.merge(tag);
     }
 

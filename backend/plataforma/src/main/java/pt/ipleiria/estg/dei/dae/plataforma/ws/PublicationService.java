@@ -272,12 +272,14 @@ public class PublicationService {
         return Response.ok("Descrição atualizada com sucesso").build();
     }
 
-    @PATCH
+    @PUT
     @Path("/{id}/alterar-visibilidade")
+    @Consumes(MediaType.APPLICATION_JSON)
     @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
-    public Response toggleVisibility(@PathParam("id") long id) {
+    public Response toggleVisibility(@PathParam("id") long id, PublicationDTO dto) {
+        String username = securityContext.getUserPrincipal().getName();
         try {
-            publicationBean.toggleVisibility(id);
+            publicationBean.toggleVisibility(id, username, dto.getHideReason());
             return Response.ok("Visibilidade alterada com sucesso.").build();
         } catch (MyEntityNotFoundException e) {
             return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();

@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 @Entity
@@ -59,7 +58,7 @@ public class Publication extends Versionable implements Serializable {
     private boolean visible = true;
 
     private String hideReason;
-    private Date hideDate;
+    private LocalDate hideDate;
 
     @ManyToOne
     private User hiddenBy;
@@ -180,11 +179,11 @@ public class Publication extends Versionable implements Serializable {
         this.hideReason = hideReason;
     }
 
-    public Date getHideDate() {
+    public LocalDate getHideDate() {
         return hideDate;
     }
 
-    public void setHideDate(Date hideDate) {
+    public void setHideDate(LocalDate hideDate) {
         this.hideDate = hideDate;
     }
 

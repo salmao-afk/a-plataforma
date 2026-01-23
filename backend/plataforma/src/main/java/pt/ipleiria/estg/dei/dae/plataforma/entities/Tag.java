@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import jakarta.json.bind.annotation.JsonbTransient;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -41,6 +42,13 @@ public class Tag extends Versionable implements Serializable {
     private boolean visible = true;
 
     private String description;
+
+    private String hideReason;
+    private Date hideDate;
+
+    @ManyToOne
+    private User hiddenBy;
+
 
     public Tag() {
     }
@@ -115,6 +123,30 @@ public class Tag extends Versionable implements Serializable {
 
     public void setVisible(boolean visible) {
         this.visible = visible;
+    }
+
+    public String getHideReason() {
+        return hideReason;
+    }
+
+    public void setHideReason(String hideReason) {
+        this.hideReason = hideReason;
+    }
+
+    public Date getHideDate() {
+        return hideDate;
+    }
+
+    public void setHideDate(Date hideDate) {
+        this.hideDate = hideDate;
+    }
+
+    public User getHiddenBy() {
+        return hiddenBy;
+    }
+
+    public void setHiddenBy(User hiddenBy) {
+        this.hiddenBy = hiddenBy;
     }
 
     @Override
