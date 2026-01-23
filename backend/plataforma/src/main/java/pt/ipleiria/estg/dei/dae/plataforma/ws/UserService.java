@@ -172,7 +172,6 @@ public class UserService {
     @Path("/me")
     @Authenticated
     @Produces(MediaType.APPLICATION_JSON)
-    @Authenticated
     public Response getMyProfile() throws MyEntityNotFoundException {
         String username = securityContext.getUserPrincipal().getName();
         UserProfileDTO dto = buildCompleteUserProfile(username);
@@ -199,7 +198,6 @@ public class UserService {
     @Path("/me")
     @Authenticated
     @Produces(MediaType.APPLICATION_JSON)
-    @Authenticated
     public Response updateMyProfile(UserProfileDTO dto) throws MyEntityNotFoundException {
         String username = securityContext.getUserPrincipal().getName();
         userBean.update(username, dto.getUser().getEmail(), dto.getUser().getName());
