@@ -44,6 +44,7 @@ const handleLogout = () => {
 
                     <template v-if="isAuthenticated">
                         <NuxtLink to="/publicacoes" class="hover:text-blue-300 transition">Publicações</NuxtLink>
+                        <NuxtLink to="/tags" class="hover:text-blue-300 transition">Tags</NuxtLink>
                         <NuxtLink to="/historico" class="hover:text-blue-300 transition">
                             Histórico Atividade
                         </NuxtLink>
@@ -51,7 +52,7 @@ const handleLogout = () => {
 
                     <template v-if="isResponsible || isAdmin">
                         <NuxtLink to="/moderacao" class="hover:text-blue-300 transition">
-                            Moderação
+                            Ocultos
                         </NuxtLink>
                     </template>
 
