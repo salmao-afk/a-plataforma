@@ -98,6 +98,18 @@ public class TagService {
         return Response.ok("Subscrição removida.").build();
     }
 
+    @PATCH
+    @Path("/{id}/alterar-visibilidade")
+    @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
+    public Response toggleVisibility(@PathParam("id") long id) {
+        try {
+            tagBean.toggleVisibility(id);
+            return Response.ok("Visibilidade da tag alterada.").build();
+        } catch (MyEntityNotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
+        }
+    }
+
     @GET
     @Path("/ocultas")
     @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})

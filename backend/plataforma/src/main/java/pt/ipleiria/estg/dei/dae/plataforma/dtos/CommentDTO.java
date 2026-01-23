@@ -1,15 +1,10 @@
 package pt.ipleiria.estg.dei.dae.plataforma.dtos;
 
-import jakarta.json.bind.annotation.JsonbProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Comment;
-import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
-import pt.ipleiria.estg.dei.dae.plataforma.entities.PublicationStatus;
-import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 

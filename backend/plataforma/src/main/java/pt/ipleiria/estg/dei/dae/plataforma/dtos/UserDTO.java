@@ -113,7 +113,7 @@ public class UserDTO implements Serializable {
                 // Converte a lista de Entidades Tag para lista de Strings (nomes das tags)
                 user.getSubscribedTags() == null ? new ArrayList<>() :
                         user.getSubscribedTags().stream()
-                                .map(tag -> new TagDTO(tag.getId(), tag.getName(), tag.getDescription())) // Mapeia para objeto com ID
+                                .map(tag -> new TagDTO(tag.getId(), tag.getName(), tag.getDescription(), tag.isVisible()))
                                 .collect(Collectors.toList()),
                 user.getRole(),
                 user.isActive(),

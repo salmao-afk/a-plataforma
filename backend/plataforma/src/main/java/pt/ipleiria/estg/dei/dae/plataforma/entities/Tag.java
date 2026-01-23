@@ -37,7 +37,8 @@ public class Tag extends Versionable implements Serializable {
     )
     private List<User> subscribers = new ArrayList<>();
 
-    //private User creator;
+    @Column(nullable = false)
+    private boolean visible = true;
 
     private String description;
 
@@ -106,6 +107,14 @@ public class Tag extends Versionable implements Serializable {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public boolean isVisible() {
+        return visible;
+    }
+
+    public void setVisible(boolean visible) {
+        this.visible = visible;
     }
 
     @Override

@@ -39,6 +39,10 @@ public class TagBean {
         return em.createNamedQuery("getAllTags", Tag.class).getResultList();
     }
 
+    public List<Tag> findAllVisible() {
+        return em.createQuery("SELECT t FROM Tag t WHERE t.visible = true", Tag.class).getResultList();
+    }
+
     public Tag findOrFail(long id) throws MyEntityNotFoundException {
         if(em.find(Tag.class, id) == null){
             throw new MyEntityNotFoundException("Tag not found");
@@ -116,9 +120,19 @@ public class TagBean {
         }
     }
 
-    // Adiciona isto (assumindo que Tag tem campo 'hidden')
+    public void toggleVisibility(long tagId) throws MyEntityNotFoundException {
+        Tag tag = em.find(Tag.class, tagId);
+
+        if (tag == null) {
+            throw new MyEntityNotFoundException("Tag não encontrada com id: " + tagId);
+        }
+
+        tag.setVisible(!tag.isVisible());
+        em.merge(tag);
+    }
+
     public List<Tag> findHidden() {
-        return em.createQuery("SELECT t FROM Tag t WHERE t.hidden = TRUE", Tag.class)
+        return em.createQuery("SELECT t FROM Tag t WHERE t.visible = FALSE", Tag.class)
             .getResultList();
     }
 }
