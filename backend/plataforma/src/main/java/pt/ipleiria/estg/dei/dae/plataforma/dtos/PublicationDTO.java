@@ -107,8 +107,7 @@ public class PublicationDTO implements Serializable {
         this.hideDate = hideDate;
     }
 
-    // --- Métodos de Conversão (Helpers) ---
-
+    // --- Métodos de Conversão ---
     public static PublicationDTO from(Publication publication) {
         String dataFormatada = null;
         if (publication.getPublicationDate() != null) {
