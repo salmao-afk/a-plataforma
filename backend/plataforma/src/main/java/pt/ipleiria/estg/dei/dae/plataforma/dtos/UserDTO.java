@@ -4,13 +4,14 @@ import jakarta.validation.constraints.Email;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.UserRole;
+import pt.ipleiria.estg.dei.dae.plataforma.entities.Versionable;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class UserDTO implements Serializable {
+public class UserDTO extends Versionable implements Serializable {
     private String username;
     private String email;
     private String password;

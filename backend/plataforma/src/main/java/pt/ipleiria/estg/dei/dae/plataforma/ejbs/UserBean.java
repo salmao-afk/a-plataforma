@@ -3,6 +3,7 @@ package pt.ipleiria.estg.dei.dae.plataforma.ejbs;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.validation.ConstraintViolationException;
@@ -58,6 +59,7 @@ public class UserBean {
     //permite atualizar o name e o email
     public void update(String username,String newEmail, String newName) throws MyEntityNotFoundException{
         User user = findOrFail(username);
+        em.lock(user, LockModeType.OPTIMISTIC);
         if(newEmail != null && !newEmail.equals(user.getEmail())) {
             User ownerOfEmail = em.createNamedQuery("findByEmail", User.class)
                                     .setParameter("email", newEmail)
@@ -267,6 +269,7 @@ public class UserBean {
 
     public void updatePassword(String username, String oldPassword, String newPassword, String confirmPassword) throws MyEntityNotFoundException {
         User user = findOrFail(username);
+        em.lock(user, LockModeType.OPTIMISTIC);
         if (!Hasher.verify(oldPassword, user.getPassword())) {
             throw new IllegalArgumentException("Password incorreta.");
         }

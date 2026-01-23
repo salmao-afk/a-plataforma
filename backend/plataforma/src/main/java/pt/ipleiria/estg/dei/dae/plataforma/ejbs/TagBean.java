@@ -3,6 +3,7 @@ package pt.ipleiria.estg.dei.dae.plataforma.ejbs;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.TagDTO;
@@ -71,45 +72,23 @@ public class TagBean {
 
 
     public void delete(long id) throws MyEntityNotFoundException {
-        if(em.find(Tag.class, id) == null){
-            throw new MyEntityNotFoundException("Tag not found");
-        }
-
-        em.remove(em.find(Tag.class, id));
+        Tag tag = findOrFail(id);
+        em.remove(tag);
     }
 
     public Tag update(long id, String newName, String newDescription) throws MyEntityNotFoundException {
-        Tag tag = em.find(Tag.class, id);
-        if(tag == null){
-            throw new MyEntityExistsException("Tag not found");
-        }
+        Tag tag = findOrFail(id);
+        em.lock(tag, LockModeType.OPTIMISTIC);
+
         tag.setName(newName);
         tag.setDescription(newDescription);
         return tag;
     }
 
-    //Método auxiliar para o PublicationBean usar
-    public Tag findByNameOrCreate(String name) {
-        try {
-            //Tenta encontrar
-            return em.createQuery("SELECT t FROM Tag t WHERE t.name = :name", Tag.class)
-                    .setParameter("name", name)
-                    .getSingleResult();
-        } catch (Exception e) {
-            //Se não encontrar, cria uma nova
-            Tag newTag = new Tag(name, "Gerada automaticamente");
-            em.persist(newTag);
-            return newTag; //Retorna a tag já "gerida" pelo EntityManager
-        }
-    }
 
     public void toggleVisibility(long tagId, String username, String hideReason) throws MyEntityNotFoundException {
-        Tag tag = em.find(Tag.class, tagId);
-
-        if (tag == null) {
-            throw new MyEntityNotFoundException("Tag não encontrada com id: " + tagId);
-        }
-
+        Tag tag = findOrFail(tagId);
+        em.lock(tag, LockModeType.OPTIMISTIC);
         boolean estadoAntigo = tag.isVisible();
 
         tag.setVisible(!tag.isVisible());
