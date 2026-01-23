@@ -65,16 +65,13 @@ public class CommentService {
         return Response.ok(response).build();
     }
 
-//    @Path("/{commentId}")
-//    @DELETE
-//    public Response deleteComment(@PathParam("commentId") long commentId) throws MyEntityNotFoundException{
-//        String username = securityContext.getUserPrincipal().getName();
-//        commentBean.deleteComment(commentId, username);
-//        Map<String, String> response = new HashMap<>();
-//        response.put("mensagem", "Comentário apagado com sucesso");
-//
-//        return Response.ok(response).build();
-//    }
+    @Path("/{commentId}")
+    @DELETE
+    public Response deleteComment(@PathParam("commentId") long commentId) throws MyEntityNotFoundException{
+        String username = securityContext.getUserPrincipal().getName();
+        commentBean.deleteComment(commentId, username);
+        return Response.ok("Comentário apagado com sucesso").build();
+    }
 
     @GET
     public Response getComments(@PathParam("pubId") long pubId) throws MyEntityNotFoundException{

@@ -105,11 +105,6 @@ public class PublicationBean {
         }
         publication.setTags(tags);
 
-        // Opcional: Criar histórico inicial (snapshot da criação)
-        // PublicationHistory history = new PublicationHistory(uploader, publication);
-        // em.persist(history);
-        // publication.addHistory(history);
-
         em.persist(publication);
         em.flush();
 
