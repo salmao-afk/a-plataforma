@@ -9,37 +9,87 @@ const authStore = useAuthStore();
 const pubStore = usePublicationsStore();
 const api = config.public.apiBase;
 
+// --- ESTADO ---
 const searchQuery = ref("");
 const isDeleteModalOpen = ref(false);
 const publicationToDelete = ref(null);
 const showMine = ref(false);
 
-// Filtro
-const filteredPublications = computed(() => {
-  if (!searchQuery.value) return pubStore.publications;
-  const q = searchQuery.value.toLowerCase();
-  return pubStore.publications.filter(p => {
-    const authorsString = Array.isArray(p.authors) ? p.authors.join(' ') : (p.authors || '');
-    return p.title?.toLowerCase().includes(q) ||
-        p.scientificArea?.toLowerCase().includes(q) ||
-        authorsString.toLowerCase().includes(q);
-  });
+// Novos Filtros
+const sortOption = ref('newest'); // 'newest', 'rating_desc', 'rating_asc'
+const selectedUser = ref('');     // '' = Todos
+
+// --- COMPUTED: Lista de Users Únicos ---
+// Analisa as publicações carregadas e extrai os nomes dos autores para a dropdown
+const uniqueUsers = computed(() => {
+  if (!pubStore.publications) return [];
+  // Mapeia apenas os usernames, cria um Set para remover duplicados, e ordena alfabeticamente
+  const users = pubStore.publications.map(p => p.uploaderUsername);
+  return [...new Set(users)].sort();
 });
 
-// Buscar Publicações + Média
+// --- COMPUTED: Lógica Central de Filtros e Ordenação ---
+const filteredPublications = computed(() => {
+  // 1. Começar com todas as publicações
+  let result = [...pubStore.publications];
+
+  // 2. Filtro por "Minhas" (Checkbox)
+  // Nota: O fetch já trata disto, mas se mudares a checkbox sem refetch, isto ajuda.
+  if (showMine.value) {
+    // Se a checkbox "Minhas" estiver ativa, ignoramos o filtro de User dropdown para não conflituar
+    // Ou garantimos que a lista já veio filtrada do backend.
+  }
+
+  // 3. Filtro por Dropdown de Utilizador
+  if (selectedUser.value && !showMine.value) {
+    result = result.filter(p => p.uploaderUsername === selectedUser.value);
+  }
+
+  // 4. Filtro por Texto (Search Query)
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    result = result.filter(p => {
+      const authorsString = Array.isArray(p.authors) ? p.authors.join(' ') : (p.authors || '');
+      return p.title?.toLowerCase().includes(q) ||
+          p.scientificArea?.toLowerCase().includes(q) ||
+          authorsString.toLowerCase().includes(q);
+    });
+  }
+
+  // 5. Ordenação
+  switch (sortOption.value) {
+    case 'rating_desc':
+      // Maior rating primeiro
+      result.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
+      break;
+    case 'rating_asc':
+      // Menor rating primeiro
+      result.sort((a, b) => (a.averageRating || 0) - (b.averageRating || 0));
+      break;
+    case 'newest':
+    default:
+      // Assumindo que ID maior é mais recente (ou podes usar publicationDate)
+      result.sort((a, b) => b.id - a.id);
+      break;
+  }
+
+  return result;
+});
+
+// --- API FETCH ---
 const fetchPublications = async () => {
   if (!authStore.token) return;
   pubStore.isLoading = true;
 
   try {
     let pubs = [];
-    // 1. Buscar Lista
     const endpoint = showMine.value ? `${api}/publicacoes/me` : `${api}/publicacoes`;
+
     pubs = await $fetch(endpoint, {
       headers: { Authorization: `Bearer ${authStore.token}` }
     });
 
-    // 2. Buscar Média individualmente
+    // Truque: Buscar média individualmente
     const pubsWithRatings = await Promise.all(pubs.map(async (pub) => {
       try {
         const res = await $fetch(`${api}/publicacoes/${pub.id}/rating-medio`, {
@@ -53,6 +103,10 @@ const fetchPublications = async () => {
     }));
 
     pubStore.publications = pubsWithRatings;
+
+    // Resetar filtro de user se o user selecionado não existir na nova lista (opcional)
+    // if (!uniqueUsers.value.includes(selectedUser.value)) selectedUser.value = '';
+
   } catch (error) {
     console.error(error);
   } finally {
@@ -78,7 +132,12 @@ const confirmDelete = async () => {
   } catch (e) { alert("Erro ao apagar."); }
 };
 
-watch(showMine, () => { fetchPublications(); });
+// Se ativar "Minhas", limpamos o filtro de user específico para não confundir
+watch(showMine, (val) => {
+  if(val) selectedUser.value = '';
+  fetchPublications();
+});
+
 onMounted(() => { if(authStore.token) fetchPublications(); });
 </script>
 
@@ -95,32 +154,60 @@ onMounted(() => { if(authStore.token) fetchPublications(); });
     </div>
 
     <div v-else class="space-y-6">
+
       <div class="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-gray-100 gap-4">
-        <h1 class="text-2xl font-extrabold text-gray-900">Publicações</h1>
-        <div class="flex items-center gap-4">
-          <div class="flex items-center bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-100 cursor-pointer">
+        <div>
+          <h1 class="text-2xl font-extrabold text-gray-900">Publicações</h1>
+          <p class="text-sm text-gray-500">Total: {{ filteredPublications.length }} documentos</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4">
+          <div class="flex items-center bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-100 cursor-pointer hover:bg-indigo-100 transition">
             <input type="checkbox" id="filterMine" v-model="showMine" class="w-5 h-5 text-indigo-600 rounded cursor-pointer">
             <label for="filterMine" class="ml-2 text-sm font-bold text-indigo-800 cursor-pointer select-none">Minhas</label>
           </div>
-          <NuxtLink to="/publicacoes/criar" class="bg-gray-900 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-black transition flex items-center gap-2">
+
+          <NuxtLink to="/publicacoes/criar" class="bg-gray-900 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-black transition flex items-center gap-2 shadow-lg">
             <span>+</span> Nova
           </NuxtLink>
         </div>
       </div>
 
-      <div class="relative group">
-        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 grid grid-cols-1 md:grid-cols-12 gap-4">
+
+        <div class="md:col-span-6 relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          </div>
+          <input v-model="searchQuery" type="text" placeholder="Pesquisar título, área, autores..." class="w-full pl-10 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition" />
         </div>
-        <input v-model="searchQuery" type="text" placeholder="Pesquisar..." class="w-full pl-12 px-4 py-4 border border-gray-200 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none transition text-lg" />
+
+        <div class="md:col-span-3">
+          <select v-model="selectedUser" :disabled="showMine" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-400">
+            <option value="">Todos os Utilizadores</option>
+            <option v-for="user in uniqueUsers" :key="user" :value="user">
+              @{{ user }}
+            </option>
+          </select>
+        </div>
+
+        <div class="md:col-span-3">
+          <select v-model="sortOption" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+            <option value="newest">📅 Mais Recentes</option>
+            <option value="rating_desc">⭐ Rating Descendente</option>
+            <option value="rating_asc">⭐ Rating Ascendente</option>
+          </select>
+        </div>
       </div>
 
       <div v-if="filteredPublications.length === 0 && !pubStore.isLoading" class="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
         <p class="text-gray-400 text-lg">Nenhuma publicação encontrada.</p>
+        <button v-if="selectedUser || searchQuery" @click="selectedUser=''; searchQuery=''" class="mt-2 text-indigo-600 font-bold hover:underline">Limpar filtros</button>
       </div>
 
       <div v-else class="grid grid-cols-1 gap-4">
         <div v-for="pub in filteredPublications" :key="pub.id" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition flex flex-col md:flex-row justify-between items-start gap-4">
+
           <div class="flex gap-5 w-full">
             <div class="shrink-0 hidden sm:block pt-1">
               <div class="h-14 w-14 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
