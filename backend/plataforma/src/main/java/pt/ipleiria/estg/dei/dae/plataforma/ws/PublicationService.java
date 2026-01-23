@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -247,6 +248,17 @@ public class PublicationService {
         String username = securityContext.getUserPrincipal().getName();
         ratingBean.removeRating(publicationId, username);
         return Response.ok("Avaliação removida.").build();
+    }
+
+    @GET
+    @Path("/{id}/rating-medio")
+
+    public Response getAverageRating(@PathParam("id") long id) throws MyEntityNotFoundException {
+        publicationBean.findOrFail(id);
+
+        double average = ratingBean.getAverageRating(id);
+
+        return Response.ok(Collections.singletonMap("average", average)).build();
     }
 
     @PATCH
