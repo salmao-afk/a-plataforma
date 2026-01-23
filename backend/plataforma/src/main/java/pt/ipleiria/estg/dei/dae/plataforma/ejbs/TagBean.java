@@ -19,7 +19,7 @@ public class TagBean {
 
 
 
-    public void create(String name, String description) throws MyEntityExistsException {
+    public Tag create(String name, String description) throws MyEntityExistsException {
         long count = em.createQuery(
                         "SELECT COUNT(t) FROM Tag t WHERE t.name = :name", Long.class)
                 .setParameter("name", name)
@@ -31,6 +31,8 @@ public class TagBean {
 
         Tag tag = new Tag(name, description);
         em.persist(tag);
+        em.flush();
+        return tag;
     }
 
     public List<Tag> findAll(){
@@ -68,13 +70,14 @@ public class TagBean {
         em.remove(em.find(Tag.class, id));
     }
 
-    public void update(long id, String newName, String newDescription) throws MyEntityNotFoundException {
+    public Tag update(long id, String newName, String newDescription) throws MyEntityNotFoundException {
         Tag tag = em.find(Tag.class, id);
         if(tag == null){
             throw new MyEntityExistsException("Tag not found");
         }
         tag.setName(newName);
         tag.setDescription(newDescription);
+        return tag;
     }
 
     // Método auxiliar para o PublicationBean usar

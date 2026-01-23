@@ -43,16 +43,22 @@ public class TagService {
     @POST
     @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
     public Response createTag(TagDTO tagDTO){
-        tagBean.create(tagDTO.getName(), tagDTO.getDescription());
-        return Response.status(Response.Status.CREATED).entity(tagDTO).build();
+        Tag tag = tagBean.create(tagDTO.getName(), tagDTO.getDescription());
+        return Response.status(Response.Status.CREATED).entity(tag).build();
     }
 
     @PUT
     @Path("/{id}")
     @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
-    public Response updateTag(@PathParam("id") long id, TagDTO dto) throws MyEntityNotFoundException{
-        tagBean.update(id, dto.getName(), dto.getDescription());
-        return Response.ok().build();
+    public Response updateTag(@PathParam("id") long id, TagDTO dto) throws MyEntityNotFoundException {
+
+        Tag tagAtualizada = tagBean.update(id, dto.getName(), dto.getDescription());
+
+        TagDTO responseDTO = TagDTO.from(tagAtualizada);
+
+        return Response.status(Response.Status.OK)
+                .entity(responseDTO)
+                .build();
     }
 
     @DELETE
@@ -68,10 +74,9 @@ public class TagService {
     public Response subscribeTag(@PathParam("id") long tagId, @Context SecurityContext securityContext)
             throws MyEntityNotFoundException {
 
-        // 1. Receber o contexto AQUI nos parâmetros para não dar erro 500
         String username = securityContext.getUserPrincipal().getName();
 
-        // 2. Chamar o Bean (que trata da lógica e da gravação)
+        // Chamar o Bean
         try {
             userBean.subscribeTag(username, tagId);
         } catch (IllegalArgumentException e) {
