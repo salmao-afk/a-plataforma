@@ -28,56 +28,29 @@ const isAdmin = computed(() => authStore.user?.role === 'ADMINISTRATOR');
 function parseBackendDate(dateInput) {
     if (!dateInput) return new Date();
 
+    // Se o Java enviar array [2023, 1, 23]
     if (Array.isArray(dateInput)) {
-        return new Date(
-            dateInput[0],
-            dateInput[1] - 1,
-            dateInput[2],
-            dateInput[3] || 0,
-            dateInput[4] || 0,
-            dateInput[5] || 0
-        );
+        return new Date(dateInput[0], dateInput[1] - 1, dateInput[2], dateInput[3]||0, dateInput[4]||0);
     }
 
-    if (typeof dateInput === 'number') return new Date(dateInput);
-
+    // Se o Java enviar String "2023-01-23" (LocalDate.toString())
     if (typeof dateInput === 'string') {
-
         const d = new Date(dateInput);
         if (!isNaN(d.getTime())) return d;
-
-        if (dateInput.includes('/')) {
-            try {
-
-                const clean = dateInput.trim();
-                const [datePart, timePart] = clean.split(' ');
-                const [day, month, year] = datePart.split('/');
-
-                let hour = 0, minute = 0;
-                if (timePart) {
-                    const parts = timePart.split(':');
-                    hour = parseInt(parts[0]);
-                    minute = parseInt(parts[1]);
-                }
-                return new Date(year, month - 1, day, hour, minute);
-            } catch (e) { }
-        }
     }
-    return new Date(); // Fallback
+
+    return new Date();
 }
 
 function formatDisplayDate(dateInput) {
     const date = parseBackendDate(dateInput);
-
-    // Validação
     if (isNaN(date.getTime())) return "Data n/a";
 
     const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0'); // Mês começa em 0
+    const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
 
-    // Retorna string forçada: "22/01/2026 "
-    return `${day}/${month}/${year} `;
+    return `${day}/${month}/${year}`;
 }
 
 // --- EXPANDIR COM LAZY LOADING ---
@@ -90,7 +63,7 @@ async function toggleExpand(item) {
     }
     expandedIds.value.add(id);
 
-    // Se for Publicação e não tiver histórico, vai buscar
+    // Se for Publicação e não tiver histórico carregado
     if (item.type === 'PUBLICATION' && (!item.history || item.history.length === 0)) {
         loadingHistoryIds.value.add(id);
 
@@ -99,64 +72,46 @@ async function toggleExpand(item) {
                 headers: { Authorization: `Bearer ${authStore.token}` }
             });
 
-            // Atualiza o item na lista
-            for (const group of allActivities.value) {
-                if (group.publicacoes) {
-                    const pub = group.publicacoes.find(p => p.id === item.originalId);
-                    if (pub) {
-                        pub.history = historyData;
-                        break;
+            // Atualizar lista
+            if (Array.isArray(allActivities.value)) {
+                for (const group of allActivities.value) {
+                    if (group.publicacoes) {
+                        const pub = group.publicacoes.find(p => p.id === item.originalId);
+                        if (pub) {
+                            pub.history = historyData;
+                        }
                     }
                 }
             }
         } catch (e) {
-            console.warn("Não há histórico disponível.");
+            console.warn("Sem histórico ou erro ao carregar.", e);
         } finally {
             loadingHistoryIds.value.delete(id);
         }
     }
 }
 
-// --- CARREGAR HISTÓRICO ---
+// --- CARREGAR HISTÓRICO GLOBAL ---
 async function loadHistory() {
     isLoading.value = true;
     errorMsg.value = "";
     allActivities.value = [];
 
     try {
-        // 1. ADMIN: Vê tudo
         if (isAdmin.value) {
-            const users = await $fetch(`${api}/utilizadores`, {
-                headers: { Authorization: `Bearer ${authStore.token}` }
-            });
-
+            const users = await $fetch(`${api}/utilizadores`, { headers: { Authorization: `Bearer ${authStore.token}` } });
             const promises = users.map(u =>
-                $fetch(`${api}/utilizadores/${u.username}/atividade`, {
-                    headers: { Authorization: `Bearer ${authStore.token}` }
-                })
-                    .then(res => ({ ...res, username: u.username }))
-                    .catch(() => null)
+                $fetch(`${api}/utilizadores/${u.username}/atividade`, { headers: { Authorization: `Bearer ${authStore.token}` } })
+                    .then(res => ({ ...res, username: u.username })).catch(() => null)
             );
-
             const results = await Promise.all(promises);
             allActivities.value = results.filter(r => r !== null);
-        }
-
-        // 2. USER: Vê o seu próprio
-        else {
-            const myUsername = authStore.user.username;
-
-
-            const myActivity = await $fetch(`${api}/utilizadores/me/atividade`, {
-                headers: { Authorization: `Bearer ${authStore.token}` }
-            });
-
-            if (myActivity) {
-                allActivities.value = [{ ...myActivity, username: myUsername }];
-            }
+        } else {
+            const myActivity = await $fetch(`${api}/utilizadores/me/atividade`, { headers: { Authorization: `Bearer ${authStore.token}` } });
+            if (myActivity) allActivities.value = [{ ...myActivity, username: authStore.user.username }];
         }
     } catch (e) {
-        console.error("Erro:", e);
+        console.error(e);
         errorMsg.value = "Erro ao carregar o histórico.";
     } finally {
         isLoading.value = false;
@@ -166,13 +121,11 @@ async function loadHistory() {
 // --- TIMELINE COMPUTADA ---
 const timeline = computed(() => {
     let items = [];
-    // Proteção caso allActivities venha nulo
     const activities = allActivities.value || [];
 
     for (const activity of activities) {
         const author = activity.username || 'Desconhecido';
 
-        // 1. Publicações
         if (activity.publicacoes?.length) {
             items.push(...activity.publicacoes.map(p => ({
                 id: `pub-${p.id}`,
@@ -182,15 +135,13 @@ const timeline = computed(() => {
                 rawDate: p.uploadDate,
                 title: p.title || "Publicação",
                 details: p.description,
-                extra: p.scientificArea,
                 tags: p.tags || [],
                 pubAuthors: p.authors || [],
                 history: p.history || [],
-                isHidden: false
+                isHidden: p.visible === false
             })));
         }
 
-        // 2. Comentários
         if (activity.comentarios?.length) {
             items.push(...activity.comentarios.map(c => ({
                 id: `com-${c.id}`,
@@ -201,11 +152,9 @@ const timeline = computed(() => {
                 title: c.hidden ? "Comentário (Oculto)" : "Comentário",
                 details: c.content,
                 isHidden: c.hidden,
-                extra: c.hidden ? "Invisível ao público" : "Visível",
             })));
         }
 
-        // 3. Ratings
         if (activity.ratings?.length) {
             items.push(...activity.ratings.map(r => ({
                 id: `rate-${r.id || Math.random()}`,
@@ -215,17 +164,13 @@ const timeline = computed(() => {
                 rawDate: r.date || r.createdAt,
                 title: `Avaliação: ${r.value}/5`,
                 details: `Na publicação: "${r.publicationTitle || '...'}"`,
-                extra: `${r.value} Estrelas`,
                 isHidden: false
             })));
         }
     }
 
-    // Filtros
     if (filterType.value !== 'ALL') items = items.filter(i => i.type === filterType.value);
-
     if (filterUsername.value.trim()) items = items.filter(i => i.author.toLowerCase().includes(filterUsername.value.toLowerCase()));
-
     if (filterText.value.trim()) {
         const term = filterText.value.toLowerCase();
         items = items.filter(i =>
@@ -264,17 +209,14 @@ onMounted(() => loadHistory());
 
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 items-end">
-
                     <div v-if="isAdmin" class="xl:col-span-3">
                         <label class="block text-sm font-bold text-gray-700 mb-1">Utilizador</label>
                         <div class="relative"><User class="absolute left-3 top-3 text-gray-400" :size="20"/><input v-model="filterUsername" type="text" placeholder="Ex: admin..." class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"/></div>
                     </div>
-
                     <div :class="isAdmin ? 'xl:col-span-5' : 'xl:col-span-8'">
                         <label class="block text-sm font-bold text-gray-700 mb-1">Conteúdo</label>
                         <div class="relative"><Search class="absolute left-3 top-3 text-gray-400" :size="20"/><input v-model="filterText" type="text" placeholder="Título, descrição, tags..." class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"/></div>
                     </div>
-
                     <div class="xl:col-span-4">
                         <label class="block text-sm font-bold text-gray-700 mb-1">Tipo de Atividade</label>
                         <div class="relative"><ListFilter class="absolute left-3 top-3 text-gray-400" :size="18"/><select v-model="filterType" class="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none appearance-none cursor-pointer"><option value="ALL">Mostrar Tudo</option><option value="PUBLICATION">Publicações</option><option value="COMMENT">Comentários</option><option value="RATING">Avaliações</option></select><div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-500"><ChevronDown :size="16"/></div></div>
@@ -321,7 +263,7 @@ onMounted(() => loadHistory());
                         </div>
 
                         <div class="flex items-center gap-2 mb-3">
-                            <span class="text-xs font-bold text-gray-400 uppercase">Conteúdo</span>
+                            <span class="text-xs font-bold text-gray-400 uppercase">Conteúdo Atual</span>
                             <div class="h-px bg-gray-200 flex-grow"></div>
                         </div>
 
@@ -341,35 +283,63 @@ onMounted(() => loadHistory());
                                 </div>
                             </div>
 
-                            <div class="flex items-center gap-2 mb-3 mt-6">
-                                <span class="text-xs font-bold text-gray-400 uppercase flex items-center gap-1"><History :size="14"/> Histórico de Alterações</span>
-                                <div class="h-px bg-gray-200 flex-grow"></div>
-                            </div>
+                            <div class="mt-8 bg-gray-50 rounded-xl p-4 border border-gray-200">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <History :size="16" class="text-indigo-600"/>
+                                    <span class="font-bold text-gray-700 text-sm uppercase tracking-wide">Histórico de Versões</span>
+                                </div>
 
-                            <div v-if="loadingHistoryIds.has(item.id)" class="text-center py-4 text-indigo-600 flex items-center justify-center gap-2">
-                                <Loader2 class="animate-spin" :size="18"/> A carregar versões antigas...
-                            </div>
+                                <div v-if="loadingHistoryIds.has(item.id)" class="text-center py-6 text-gray-500 flex flex-col items-center gap-2">
+                                    <Loader2 class="animate-spin text-indigo-500" :size="24"/>
+                                    <span class="text-xs">A carregar edições antigas...</span>
+                                </div>
 
-                            <div v-else-if="!item.history || item.history.length === 0" class="text-xs text-gray-400 italic bg-white p-3 border rounded text-center">
-                                Nenhuma edição registada.
-                            </div>
+                                <div v-else-if="!item.history || item.history.length === 0" class="text-center py-4 text-gray-400 text-xs italic bg-white rounded border border-dashed border-gray-300">
+                                    Esta publicação nunca foi editada.
+                                </div>
 
-                            <div v-else class="space-y-3">
-                                <div v-for="(ver, idx) in item.history" :key="idx" class="bg-white p-3 rounded border border-gray-200 text-sm shadow-sm relative overflow-hidden">
-                                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-amber-400"></div>
-                                    <div class="flex justify-between items-start mb-2 pl-2">
-                                        <span class="font-bold text-gray-700 text-xs uppercase">Editado por: <span class="text-indigo-600">{{ ver.modifierName }}</span></span>
-                                        <span class="text-xs text-gray-400 flex items-center gap-1"><Clock :size="12"/> {{ formatDisplayDate(ver.date) }}</span>
-                                    </div>
-                                    <div class="grid grid-cols-1 gap-2 text-xs pl-2">
-                                        <div v-if="ver.oldTitle"><span class="font-bold text-gray-500">Título Antigo:</span> {{ ver.oldTitle }}</div>
-                                        <div v-if="ver.description"><span class="font-bold text-gray-500">Descrição Antiga:</span><p class="font-mono bg-gray-50 p-1 mt-1 border rounded text-gray-600">{{ ver.description }}</p></div>
-                                        <div v-if="ver.tagsSnapshots"><span class="font-bold text-gray-500">Tags na altura:</span> {{ ver.tagsSnapshots }}</div>
+                                <div v-else class="space-y-4">
+                                    <div v-for="(ver, idx) in item.history" :key="idx"
+                                         class="bg-white rounded-lg border-l-4 border-amber-400 shadow-sm p-3 relative text-sm hover:shadow-md transition">
+
+                                        <div class="flex justify-between items-start border-b border-gray-100 pb-2 mb-2">
+                                            <div>
+                                                <div class="font-bold text-gray-800 flex items-center gap-2">
+                                                    <User :size="12" class="text-gray-400"/>
+                                                    {{ ver.modifierName || 'Sistema' }}
+                                                </div>
+                                                <div class="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                                                    <Clock :size="10"/> {{ formatDisplayDate(ver.date) }}
+                                                </div>
+                                            </div>
+                                            <span class="bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase">Versão Arquivada</span>
+                                        </div>
+
+                                        <div class="space-y-2 text-xs">
+                                            <div v-if="ver.oldTitle">
+                                                <span class="font-bold text-gray-500 block mb-0.5">Título Anterior:</span>
+                                                <span class="text-gray-700 bg-gray-50 px-2 py-1 rounded block">{{ ver.oldTitle }}</span>
+                                            </div>
+
+                                            <div v-if="ver.description">
+                                                <span class="font-bold text-gray-500 block mb-0.5">Descrição Anterior:</span>
+                                                <div class="text-gray-600 bg-gray-50 p-2 rounded border border-gray-100 font-mono text-[11px] leading-relaxed max-h-24 overflow-y-auto">
+                                                    {{ ver.description }}
+                                                </div>
+                                            </div>
+
+                                            <div v-if="ver.tagsSnapshots">
+                                                <span class="font-bold text-gray-500 block mb-0.5">Tags na altura:</span>
+                                                <span class="text-indigo-600 bg-indigo-50 px-2 py-1 rounded block truncate">
+                                                    {{ ver.tagsSnapshots }}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
+                        </div>
                     </div>
                 </div>
             </div>

@@ -100,11 +100,9 @@ public class CommentBean {
         return comment;
     }
 
-    //mariazinha
     public List<Comment> findHidden() {
         return em.createQuery("SELECT c FROM Comment c WHERE c.hidden = TRUE ORDER BY c.postedAt DESC", Comment.class)
             .getResultList();
     }
-
 
 }

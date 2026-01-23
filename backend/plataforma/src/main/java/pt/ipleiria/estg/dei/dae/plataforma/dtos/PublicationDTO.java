@@ -83,13 +83,13 @@ public class PublicationDTO implements Serializable {
         this.description = description;
     }
 
-//    public boolean isVisible() {
-//        return visible;
-//    }
-//
-//    public void setVisible(boolean visible) {
-//        this.visible = visible;
-//    }
+    public boolean isVisible() {
+        return visible;
+    }
+
+    public void setVisible(boolean visible) {
+        this.visible = visible;
+    }
 
     public String getHideReason() {
         return hideReason;
