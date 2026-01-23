@@ -6,6 +6,7 @@ import jakarta.ejb.Singleton;
 import jakarta.ejb.Startup;
 import pt.ipleiria.estg.dei.dae.plataforma.dtos.PublicationDTO;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
+import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.UserRole;
 
 import java.io.ByteArrayInputStream;
@@ -35,32 +36,33 @@ public class ConfigBean {
     @PostConstruct
     public void populateDB() {
         try {
-            // 1. CRIAR USERS (Direto, sem verificações)
+            //CRIAR USERS
             userBean.create("admin", "123", "Administrador Chefe", "admin@ipleiria.pt", UserRole.ADMINISTRATOR);
             userBean.create("user1", "123", "João Colaborador", "user1@ipleiria.pt", UserRole.COLLABORATOR);
             userBean.create("EduResponsavel", "123", "Eduardo Responsável", "edu@ipleiria.pt", UserRole.RESPONSIBLE);
             userBean.create("leitor", "123", "Maria Leitora", "maria@ipleiria.pt", UserRole.COLLABORATOR);
+            userBean.create("Spammer", "123", "Spammer", "spammer@ipleiria.pt", UserRole.COLLABORATOR);
 
-            // 2. CRIAR TAGS
+            //CRIAR TAGS
             tagBean.create("Bases de Dados", "SQL e NoSQL");
             tagBean.create("IA", "Machine Learning");
             tagBean.create("DevOps", "Docker e CI/CD");
             tagBean.create("Lixo", "Tag spam");
 
-            // 3. SUBSCREVER TAGS (Alimentar o Feed)
-            // Assumindo que criaste o método subscribeTag no UserBean como falámos
-            userBean.subscribeTag("user1", "IA");
-            userBean.subscribeTag("EduResponsavel", "Bases de Dados");
-            userBean.subscribeTag("admin", "DevOps");
+            //SUBSCREVER TAGS
+            long idIA = getTagIdByName("IA");
+            long idBD = getTagIdByName("Bases de Dados");
+            long idDevOps = getTagIdByName("DevOps");
 
-            // 4. CRIAR PUBLICAÇÕES
-            // Nota: Criamos um novo InputStream para cada uma para não haver erros de leitura
+            if (idIA != -1) userBean.subscribeTag("user1", idIA);
+            if (idBD != -1) userBean.subscribeTag("EduResponsavel", idBD);
+            if (idDevOps != -1) userBean.subscribeTag("admin", idDevOps);
 
-            // --- Pub 1: Completa ---
+            //CRIAR PUBLICAÇÕES
             publicationBean.create(
                     "Como configurar WildFly",
                     "DevOps",
-                    "Tutorial completo sobre servidores.",
+                    "Resumo a ser gerado pela IA...",
                     Arrays.asList("João Colaborador", "GPT"),
                     "Artigo",
                     "user1",
@@ -69,11 +71,10 @@ public class ConfigBean {
                     new ByteArrayInputStream("Conteudo WildFly".getBytes())
             );
 
-            // --- Pub 2: Tese ---
             publicationBean.create(
                     "O Futuro das Bases de Dados",
                     "Engenharia",
-                    "Tese comparativa.",
+                    "Resumo a ser gerado pela IA...",
                     Arrays.asList("Eduardo Responsável"),
                     "Tese",
                     "EduResponsavel",
@@ -82,11 +83,11 @@ public class ConfigBean {
                     new ByteArrayInputStream("Conteudo BD".getBytes())
             );
 
-            // --- Pub 3: Spam (Para ocultar) ---
+            //Publi para ocultar
             publicationBean.create(
-                    "Ganhe dinheiro rápido",
-                    "Marketing",
-                    "Esquema duvidoso.",
+                    "Ganhe dinheiro com Forex",
+                    "Marketing digital e criptomoedas",
+                    "Resumo a ser gerado pela IA...",
                     Arrays.asList("Spammer"),
                     "Spam",
                     "leitor",
@@ -95,47 +96,61 @@ public class ConfigBean {
                     new ByteArrayInputStream("Lixo".getBytes())
             );
 
-            // 5. INTERAÇÕES E ESTADOS
-            // Vamos buscar tudo o que acabámos de criar
             List<Publication> todas = publicationBean.findAll();
 
-            // Recuperar referências (Assume-se que existem porque acabámos de as criar)
             Publication pubWildfly = getPub(todas, "WildFly");
             Publication pubBD = getPub(todas, "Futuro");
             Publication pubSpam = getPub(todas, "dinheiro");
 
-            // --- Interações Pub 1 (Wildfly) ---
+            // Interações
             commentBean.create(pubWildfly.getId(), "admin", "Bom tutorial.");
             ratingBean.setRating(pubWildfly.getId(), "admin", 5);
             ratingBean.setRating(pubWildfly.getId(), "EduResponsavel", 4);
 
-            // Simular Edição (Histórico)
+            // Edição
             PublicationDTO dtoUpdate = PublicationDTO.from(pubWildfly);
             dtoUpdate.setTitle("Como configurar WildFly (v2)");
             publicationBean.update(pubWildfly.getId(), dtoUpdate, "user1");
 
-            // --- Interações Pub 2 (BD) ---
-            commentBean.create(pubBD.getId(), "leitor", "Não concordo com nada, lixo.");
+            //Rating
             ratingBean.setRating(pubBD.getId(), "user1", 3);
+            commentBean.create(pubBD.getId(), "leitor", "Não gostei.");
 
-            // --- Moderação Pub 3 (Spam) ---
+            // --- MODERAÇÃO ---
             ratingBean.setRating(pubSpam.getId(), "admin", 1);
-            publicationBean.toggleVisibility(pubSpam.getId()); // Admin oculta
 
-            logger.info(">>> SEED DATA CONCLUÍDO COM SUCESSO!");
+            publicationBean.toggleVisibility(
+                    pubSpam.getId(),
+                    "admin",
+                    "Violação dos termos de serviço (scam)"
+            );
+
+            logger.info(">>> Config Bean corrido com sucesso!");
 
         } catch (Exception e) {
-            // Se falhar aqui, o deploy mostra o erro no log
-            logger.severe(">>> ERRO FATAL NO SEED DATA: " + e.getMessage());
+            logger.severe(">>> ERRO NO CONFIG BEAN: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    // Helper simples para não sujar o código principal
+    // --- Auxiliares ---
     private Publication getPub(List<Publication> lista, String termo) {
         return lista.stream()
                 .filter(p -> p.getTitle().contains(termo))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Erro no Seed: Publicação '" + termo + "' não encontrada!"));
+    }
+
+
+    private long getTagIdByName(String name) {
+        try {
+            return tagBean.findAll().stream()
+                    .filter(t -> t.getName().equals(name))
+                    .findFirst()
+                    .map(Tag::getId)
+                    .orElse(-1L);
+        } catch (Exception e) {
+            return -1L;
+        }
     }
 }
