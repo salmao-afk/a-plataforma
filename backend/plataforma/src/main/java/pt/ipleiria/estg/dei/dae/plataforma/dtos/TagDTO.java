@@ -2,6 +2,7 @@ package pt.ipleiria.estg.dei.dae.plataforma.dtos;
 
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
 
+import java.util.Date;
 import java.util.List;
 
 public class TagDTO {
@@ -9,6 +10,9 @@ public class TagDTO {
     public String name;
     public String description;
     public boolean visible;
+    public String hideReason;
+    public Date hideDate;
+    public UserDTO hiddenBy;
 
     public TagDTO() {
     }
@@ -54,4 +58,28 @@ public class TagDTO {
     public boolean isVisible() { return visible; }
 
     public void setVisible(boolean visible) { this.visible = visible; }
+
+    public String getHideReason() {
+        return hideReason;
+    }
+
+    public void setHideReason(String hideReason) {
+        this.hideReason = hideReason;
+    }
+
+    public Date getHideDate() {
+        return hideDate;
+    }
+
+    public void setHideDate(Date hideDate) {
+        this.hideDate = hideDate;
+    }
+
+    public UserDTO getHiddenBy() {
+        return hiddenBy;
+    }
+
+    public void setHiddenBy(UserDTO hiddenBy) {
+        this.hiddenBy = hiddenBy;
+    }
 }

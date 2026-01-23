@@ -23,6 +23,9 @@ import java.util.List;
 @Authenticated
 public class TagService {
 
+    @Context
+    private SecurityContext securityContext;
+
     @EJB
     private UserBean userBean;
 
@@ -76,7 +79,11 @@ public class TagService {
 
         String username = securityContext.getUserPrincipal().getName();
 
-        // Chamar o Bean
+        Tag tag = tagBean.findOrFail(tagId);
+        if(tag.isVisible() == false){
+            return Response.status(Response.Status.NOT_FOUND).entity("Tag não disponível").build();
+        }
+
         try {
             userBean.subscribeTag(username, tagId);
         } catch (IllegalArgumentException e) {
@@ -101,9 +108,10 @@ public class TagService {
     @PATCH
     @Path("/{id}/alterar-visibilidade")
     @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
-    public Response toggleVisibility(@PathParam("id") long id) {
+    public Response toggleVisibility(@PathParam("id") long id, TagDTO dto) {
+        String username = securityContext.getUserPrincipal().getName();
         try {
-            tagBean.toggleVisibility(id);
+            tagBean.toggleVisibility(id, username, dto.getHideReason());
             return Response.ok("Visibilidade da tag alterada.").build();
         } catch (MyEntityNotFoundException e) {
             return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();

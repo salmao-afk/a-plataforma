@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -307,9 +308,9 @@ public class PublicationBean {
         return em.find(Publication.class, id);
     }
 
-    public void toggleVisibility(long publicationId) throws MyEntityNotFoundException {
-        Publication publication = em.find(Publication.class, publicationId);
-
+    public void toggleVisibility(long publicationId, String username, String hideReason) throws MyEntityNotFoundException {
+        Publication publication = findOrFail(publicationId);
+        User user = userBean.findOrFail(username);
         if (publication == null) {
             throw new MyEntityNotFoundException("Publicação não encontrada com id: " + publicationId);
         }
@@ -317,6 +318,17 @@ public class PublicationBean {
         boolean estadoAntigo = publication.isVisible();
 
         publication.setVisible(!estadoAntigo);
+
+        if(estadoAntigo == true){
+            publication.setHideReason(hideReason);
+            publication.setHiddenBy(user);
+            publication.setHideDate(LocalDate.now());
+        }
+        else{
+            publication.setHideReason(null);
+            publication.setHiddenBy(null);
+            publication.setHideDate(null);
+        }
 
         em.flush();
     }
