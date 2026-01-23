@@ -2,7 +2,10 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '~/stores/auth-store.js';
+// Importação dos Componentes
 import CommentsSection from '~/components/comments/CommentsSection.vue';
+import StarRatingInput from '~/components/rating/StarRatingInput.vue';
+import PublicationStats from '~/components/rating/PublicationStats.vue';
 
 const route = useRoute();
 const config = useRuntimeConfig();
@@ -12,6 +15,8 @@ const authStore = useAuthStore();
 const pub = ref(null);
 const id = route.params.id;
 const isLoading = ref(true);
+const myRating = ref(0);
+const commentsCountFromChild = ref(0); // Para guardar contagem vinda do componente filho
 
 // Verifica se pode editar (Admin ou Dono)
 const canEdit = computed(() => {
@@ -22,30 +27,85 @@ const canEdit = computed(() => {
 // Formata a data (ex: 21/01/2025)
 const formattedDate = computed(() => {
   if (!pub.value?.publicationDate) return '';
-  // Se a data vier como array [ano, mes, dia...] ou string ISO
   return new Date(pub.value.publicationDate).toLocaleDateString('pt-PT');
 });
 
+// --- CÁLCULOS DE ESTATÍSTICA (FRONTEND) ---
+const displayAverage = computed(() => {
+  // Se o backend já enviar (futuro), usa. Senão, calcula.
+  if (pub.value?.averageRating) return pub.value.averageRating;
+
+  const ratings = pub.value?.ratings || [];
+  if (ratings.length === 0) return 0;
+  const sum = ratings.reduce((acc, r) => acc + r.value, 0);
+  return sum / ratings.length;
+});
+
+const displayRatingsCount = computed(() => {
+  if (pub.value?.ratingsCount) return pub.value.ratingsCount;
+  return pub.value?.ratings ? pub.value.ratings.length : 0;
+});
+
+const displayCommentsCount = computed(() => {
+  // Prioridade: Backend > Componente Filho > Lista no Pub
+  if (pub.value?.commentsCount) return pub.value.commentsCount;
+  if (commentsCountFromChild.value > 0) return commentsCountFromChild.value;
+  return pub.value?.comments ? pub.value.comments.length : 0;
+});
+
+
 // Buscar Publicação
-onMounted(async () => {
+const fetchPublication = async () => {
   try {
-    pub.value = await $fetch(`${api}/publicacoes/${id}`, {
-      // Permitir ver publicações públicas mesmo sem token (opcional)
+    const data = await $fetch(`${api}/publicacoes/${id}`, {
       headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
     });
+    pub.value = data;
+
+    // Tentar encontrar o meu voto se vier no objeto (solução temporária)
+    if (authStore.user && data.ratings) {
+      const myVote = data.ratings.find(r => r.userUsername === authStore.user.username);
+      if(myVote) myRating.value = myVote.value;
+    }
   } catch (e) {
     console.error(e);
-    alert("Publicação não encontrada.");
+    // alert("Publicação não encontrada."); // Removido para não ser intrusivo
   } finally {
     isLoading.value = false;
   }
-});
+};
+
+// Submeter Voto
+const submitRating = async (val) => {
+  if(!authStore.token) return alert("Faça login para avaliar!");
+
+  try {
+    await $fetch(`${api}/publicacoes/${id}/rating`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authStore.token}` },
+      body: { value: val }
+    });
+    myRating.value = val;
+    // Recarrega para atualizar médias se o backend calcular
+    await fetchPublication();
+    alert("Avaliação registada!");
+  } catch(e) {
+    alert("Erro ao avaliar.");
+  }
+};
+
+// Callback quando um comentário é adicionado
+const handleCommentAdded = () => {
+  // Incrementa contador visualmente
+  commentsCountFromChild.value++;
+  // Opcional: recarregar pub se o backend contar
+  // fetchPublication();
+};
+
 
 // Função de Download
 const downloadFile = async () => {
-  if (!authStore.token) {
-    return alert("Precisa de fazer login para descarregar ficheiros.");
-  }
+  if (!authStore.token) return alert("Precisa de fazer login para descarregar ficheiros.");
 
   try {
     const blob = await $fetch(`${api}/publicacoes/${id}/download`, {
@@ -53,11 +113,9 @@ const downloadFile = async () => {
       responseType: 'blob'
     });
 
-    // Criar link temporário para download
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    // Tenta usar o nome do ficheiro original se disponível, senão usa um genérico
     link.setAttribute('download', pub.value.filename || `documento_${id}.pdf`);
     document.body.appendChild(link);
     link.click();
@@ -67,6 +125,10 @@ const downloadFile = async () => {
     alert("Erro ao descarregar ficheiro.");
   }
 };
+
+onMounted(() => {
+  fetchPublication();
+});
 </script>
 
 <template>
@@ -94,6 +156,14 @@ const downloadFile = async () => {
 
         <h1 class="text-3xl md:text-4xl font-bold text-gray-900 leading-tight">{{ pub.title }}</h1>
         <p class="text-lg text-blue-600 font-medium mt-2">{{ pub.scientificArea }}</p>
+
+        <div class="mt-4 pt-4 border-t border-gray-100">
+          <PublicationStats
+              :average="displayAverage"
+              :ratingsCount="displayRatingsCount"
+              :commentsCount="displayCommentsCount"
+          />
+        </div>
 
         <div class="flex items-center gap-2 mt-6 pb-6 border-b border-gray-100">
           <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600">
@@ -125,7 +195,6 @@ const downloadFile = async () => {
         </div>
 
         <div class="mt-10 pt-6 border-t border-gray-100 flex flex-wrap justify-end gap-3">
-
           <NuxtLink
               v-if="canEdit"
               :to="`/publicacoes/editar/${pub.id}`"
@@ -145,7 +214,25 @@ const downloadFile = async () => {
         </div>
       </div>
 
-      <CommentsSection :publicationId="pub.id" />
+      <div class="my-8 p-6 bg-gradient-to-r from-gray-50 to-white border border-gray-100 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+        <div>
+          <h3 class="font-bold text-gray-800 text-lg">Classifique este documento</h3>
+          <p class="text-gray-500 text-sm">A sua opinião é importante para a comunidade.</p>
+        </div>
+        <div class="flex flex-col items-center sm:items-end">
+          <StarRatingInput
+              :modelValue="myRating"
+              @rate="submitRating"
+              :readonly="!authStore.token"
+          />
+          <span v-if="!authStore.token" class="text-xs text-red-400 mt-1 font-medium">Faça login para votar</span>
+        </div>
+      </div>
+
+      <CommentsSection
+          :publicationId="pub.id"
+          @comment-added="handleCommentAdded"
+      />
 
     </div>
   </div>
