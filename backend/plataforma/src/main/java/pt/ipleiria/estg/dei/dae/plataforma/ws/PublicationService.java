@@ -252,7 +252,6 @@ public class PublicationService {
 
     @GET
     @Path("/{id}/rating-medio")
-
     public Response getAverageRating(@PathParam("id") long id) throws MyEntityNotFoundException {
         publicationBean.findOrFail(id);
 

@@ -70,10 +70,7 @@ public class CommentService {
     public Response deleteComment(@PathParam("commentId") long commentId) throws MyEntityNotFoundException{
         String username = securityContext.getUserPrincipal().getName();
         commentBean.deleteComment(commentId, username);
-        Map<String, String> response = new HashMap<>();
-        response.put("mensagem", "Comentário apagado com sucesso");
-
-        return Response.ok(response).build();
+        return Response.ok("Comentário apagado com sucesso").build();
     }
 
     @GET
