@@ -49,7 +49,6 @@ public class AuthenticationFilter implements ContainerRequestFilter {
         } catch (Exception e) {
             requestContext.abortWith(Response.status(Response.Status.INTERNAL_SERVER_ERROR).build());
         }
-        // Get token from the HTTP Authorization header
 
         requestContext.setSecurityContext(new SecurityContext() {
             @Override

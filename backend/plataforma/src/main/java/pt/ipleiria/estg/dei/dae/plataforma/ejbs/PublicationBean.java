@@ -16,8 +16,6 @@ import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityExistsException;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
 
-// Importa Criteria API
-import jakarta.persistence.criteria.*;
 
 
 import java.io.File;
@@ -66,7 +64,7 @@ public class PublicationBean {
             throw new IllegalArgumentException("É obrigatório fazer upload de um ficheiro.");
         }
 
-        // 1. Gestão de Ficheiros
+        //Gestão de Ficheiros
         Path targetDirectoryPath = Paths.get(UPLOAD_DIR);
         if(!Files.exists(targetDirectoryPath)){
             Files.createDirectories(targetDirectoryPath);
@@ -76,7 +74,7 @@ public class PublicationBean {
         Path targetFilePath = targetDirectoryPath.resolve(uniqueFileName);
         Files.copy(stream, targetFilePath, StandardCopyOption.REPLACE_EXISTING);
 
-        // 2. Criar Entidade
+        //Criar Entidade
         Publication publication = new Publication();
         publication.setTitle(title);
         publication.setType(type);
@@ -88,7 +86,7 @@ public class PublicationBean {
         publication.setFilename(filename);
         publication.setFilepath(targetFilePath.toString());
 
-        // 3. Gestão de Tags
+        //Gestão de Tags
         List<Tag> tags = new ArrayList<>();
         Set<User> usersToNotify = new HashSet<>();
 
@@ -142,7 +140,6 @@ public class PublicationBean {
         publication.setDescription(newDescription);
     }
 
-    // --- READ (Buscas) ---
 
     public List<Publication> findAll() {
         return em.createQuery(
@@ -160,23 +157,23 @@ public class PublicationBean {
 
         queryStr.append(" WHERE 1=1");
 
-        // Filtro de Área Científica
+        //Filtro de Área Científica
         if (area != null && !area.isEmpty()) {
             queryStr.append(" AND LOWER(p.scientificArea) LIKE :area");
         }
 
-        // Filtro de Tag
+        //Filtro de Tag
         if (tagsStr != null && !tagsStr.isEmpty()) {
             queryStr.append(" AND t.name = :tagName");
         }
 
-        // Ordenação
+        //Ordenação
         queryStr.append(" ORDER BY p.publicationDate DESC");
 
-        // Criar a Query
+        //Criar a Query
         var query = em.createQuery(queryStr.toString(), Publication.class);
 
-        // Preencher os parâmetros
+        //Preencher os parâmetros
         if (area != null && !area.isEmpty()) {
             query.setParameter("area", "%" + area.toLowerCase() + "%");
         }
@@ -189,7 +186,7 @@ public class PublicationBean {
 
     public Publication findOrFail(long id) throws MyEntityNotFoundException {
         try {
-            // LEFT JOIN FETCH por causa do Lazy Loading
+            //LEFT JOIN FETCH por causa do Lazy Loading
             return em.createQuery(
                             "SELECT p FROM Publication p LEFT JOIN FETCH p.tags WHERE p.id = :id",
                             Publication.class)
@@ -212,7 +209,6 @@ public class PublicationBean {
                 .getResultList();
     }
 
-    // ------------------------------------------
 
     // --- FILES & DELETE ---
 
@@ -235,19 +231,19 @@ public class PublicationBean {
         Publication publication = findOrFail(id);
         User modifier = userBean.findOrFail(modifierUsername);
 
-        // Snapshot histórico
+        //Snapshot histórico
         PublicationHistory history = new PublicationHistory(modifier, publication);
         em.persist(history);
         publication.addHistory(history);
 
-        // Atualizar campos
+        //Atualizar campos
         publication.setTitle(dto.getTitle());
         publication.setScientificArea(dto.getScientificArea());
         publication.setType(dto.getType());
         publication.setDescription(dto.getDescription());
         publication.setAuthors(dto.getAuthors());
 
-        // Atualizar Tags
+        //Atualizar Tags
         if (dto.getTags() != null) {
             List<Tag> newTags = new ArrayList<>();
             for (String tagName : dto.getTags()) {
@@ -307,38 +303,6 @@ public class PublicationBean {
         publication.getTags().remove(tag);
     }
 
-    public String generateSmartSummary(long publicationId) {
-        Publication pub = find(publicationId);
-        if (pub == null || pub.getFilepath() == null) return "Publicação sem ficheiro.";
-
-        try {
-            String pdfText = extractTextFromPdf(pub.getFilepath());
-
-            if (pdfText != null && !pdfText.isEmpty()) {
-                String resumo = llmBean.generateSummary(pdfText);
-
-                pub.setDescription(resumo);
-                return resumo;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Erro: " + e.getMessage();
-        }
-        return "Não foi possível gerar resumo.";
-    }
-
-    //metodo para ler pdf
-    private String extractTextFromPdf(String filePath) {
-        try (PDDocument document = PDDocument.load(new File(filePath))) {
-            if (!document.isEncrypted()) {
-                PDFTextStripper stripper = new PDFTextStripper();
-                return stripper.getText(document);
-            }
-        } catch (IOException e) {
-            System.err.println("Erro ao ler PDF: " + e.getMessage());
-        }
-        return null;
-    }
 
     public Publication find(long id) {
         return em.find(Publication.class, id);
@@ -373,4 +337,42 @@ public class PublicationBean {
         return em.createQuery("SELECT p FROM Publication p WHERE p.visible = FALSE ORDER BY p.publicationDate DESC", Publication.class)
             .getResultList();
     }
+
+    //------------IA------------
+    public String generateSmartSummary(long publicationId) {
+        Publication pub = find(publicationId);
+        if (pub == null || pub.getFilepath() == null) return "Publicação sem ficheiro.";
+
+        try {
+            String pdfText = extractTextFromPdf(pub.getFilepath());
+
+            if (pdfText != null && !pdfText.isEmpty()) {
+                String resumo = llmBean.generateSummary(pdfText);
+
+                pub.setDescription(resumo);
+                em.merge(pub);
+                em.flush();
+                return resumo;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Erro: " + e.getMessage();
+        }
+        return "Não foi possível gerar resumo.";
+    }
+
+    //metodo para ler pdf
+    private String extractTextFromPdf(String filePath) {
+        try (PDDocument document = PDDocument.load(new File(filePath))) {
+            if (!document.isEncrypted()) {
+                PDFTextStripper stripper = new PDFTextStripper();
+                return stripper.getText(document);
+            }
+        } catch (IOException e) {
+            System.err.println("Erro ao ler PDF: " + e.getMessage());
+        }
+        return null;
+    }
+
+
 }

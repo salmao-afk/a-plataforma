@@ -15,31 +15,46 @@ public class ConfigBean {
     @EJB
     private PublicationBean publicationBean;
 
+    @EJB
+    private CommentBean commentBean;
+
+    @EJB
+    private TagBean tagBean;
+
+    @EJB
+    private RatingBean ratingBean;
     @PostConstruct
     public void populateDB() {
         try {
-            // Criar o Admin inicial
+            //Criar users
             userBean.create(
                     "admin",
-                    "123", // Será feito hash dentro do create
+                    "123",
                     "Administrador Chefe",
                     "admin@ipleiria.pt",
                     UserRole.ADMINISTRATOR
             );
             userBean.create(
                     "user1",
-                    "123", // Será feito hash dentro do create
+                    "123",
                     "Colaborador",
                     "user1@ipleiria.pt",
                     UserRole.COLLABORATOR
             );
             userBean.create(
                     "EduResponsavel",
-                    "123", // Será feito hash dentro do create
+                    "123",
                     "EduMuitoResponsavel",
                     "eduGamer@ipleiria.pt",
                     UserRole.RESPONSIBLE
             );
+
+            //Criar tags
+            tagBean.create("Bases de Dados",
+                    "Tópicos relacionados com BDs");
+            tagBean.create("IA",
+                    "Tópicos relacionados com IA");
+
 
         } catch (Exception e) {
         }

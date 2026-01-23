@@ -41,5 +41,7 @@ services:
       - ollama_data:/root/.ollama
     networks:
       - default
+    entrypoint: [ "/bin/sh", "-c" ]
+    command: [ "/bin/ollama serve & sleep 5 && ollama pull tinyllama && wait" ]
 volumes:
   ollama_data:

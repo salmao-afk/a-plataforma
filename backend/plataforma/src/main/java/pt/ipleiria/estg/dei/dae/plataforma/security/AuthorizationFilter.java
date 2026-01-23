@@ -44,13 +44,11 @@ public class AuthorizationFilter implements ContainerRequestFilter {
                 .getProperty("org.jboss.resteasy.core.ResourceMethodInvoker");
         Method method = methodInvoker.getMethod();
         var resource = method.getDeclaringClass();
-        // If authenticated, access granted for all roles
         if (resource.isAnnotationPresent(PermitAll.class)) {
             if (method.isAnnotationPresent(DenyAll.class)) {
                 containerRequestContext.abortWith(ACCESS_DENIED);
                 return;
             }
-            // Verify user access
             if (method.isAnnotationPresent(RolesAllowed.class)) {
                 RolesAllowed rolesAnnotation = method
                         .getAnnotation(RolesAllowed.class);
@@ -64,18 +62,15 @@ public class AuthorizationFilter implements ContainerRequestFilter {
                 return;
             }
         }
-        // Access denied for all
         if(resource.isAnnotationPresent(DenyAll.class)) {
             if (method.isAnnotationPresent(PermitAll.class)) {
                 return;
             }
-            // Verify user access
             if (method.isAnnotationPresent(RolesAllowed.class)) {
                 RolesAllowed beanRolesAnnotation = method
                         .getAnnotation(RolesAllowed.class);
                 var roles =
                         new HashSet<>(Arrays.asList(beanRolesAnnotation.value()));
-                // Is user valid?
                 if(roles.stream().anyMatch(securityContext::isUserInRole)) {
                     return;
                 }
@@ -94,12 +89,10 @@ public class AuthorizationFilter implements ContainerRequestFilter {
             RolesAllowed rolesAnnotation = resource
                     .getAnnotation(RolesAllowed.class);
             var roles = new HashSet<>(Arrays.asList(rolesAnnotation.value()));
-            // Verify user access
             if (method.isAnnotationPresent(RolesAllowed.class)) {
                 rolesAnnotation = method.getAnnotation(RolesAllowed.class);
                 roles.addAll(Arrays.asList(rolesAnnotation.value()));
             }
-            // Is user valid?
             if(roles.stream().anyMatch(securityContext::isUserInRole)) {
                 return;
             }
@@ -113,11 +106,9 @@ public class AuthorizationFilter implements ContainerRequestFilter {
         if (method.isAnnotationPresent(PermitAll.class)) {
             return;
         }
-        // Verify user access
         if (method.isAnnotationPresent(RolesAllowed.class)) {
             var roles =
                     new HashSet<>(Arrays.asList(method.getAnnotation(RolesAllowed.class).value()));
-            // Is user valid?
             if(roles.stream().anyMatch(securityContext::isUserInRole)) {
                 return;
             }
