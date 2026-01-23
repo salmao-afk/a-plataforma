@@ -8,18 +8,20 @@ public class TagDTO {
     private long id;
     public String name;
     public String description;
+    public boolean visible;
 
     public TagDTO() {
     }
 
-    public TagDTO(long id, String name, String description) {
+    public TagDTO(long id, String name, String description, boolean visible) {
         this.id = id;
         this.name = name;
         this.description = description;
+        this.visible = visible;
     }
 
     public static TagDTO from(Tag tag){
-        return new TagDTO(tag.getId(),tag.getName(), tag.getDescription());
+        return new TagDTO(tag.getId(),tag.getName(), tag.getDescription(), tag.isVisible());
     }
 
     public static List<TagDTO> from(List<Tag> tags){
@@ -48,4 +50,8 @@ public class TagDTO {
     public void setDescription(String description) {
         this.description = description;
     }
+
+    public boolean isVisible() { return visible; }
+
+    public void setVisible(boolean visible) { this.visible = visible; }
 }

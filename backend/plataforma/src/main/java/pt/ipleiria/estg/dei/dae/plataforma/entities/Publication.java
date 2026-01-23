@@ -1,8 +1,6 @@
 package pt.ipleiria.estg.dei.dae.plataforma.entities;
 
-import jakarta.ejb.Asynchronous;
 import jakarta.persistence.*;
-import jakarta.transaction.Status;
 import jakarta.validation.constraints.NotNull;
 
 import java.io.Serializable;
@@ -18,7 +16,7 @@ import java.util.List;
         @NamedQuery(name = "Publication.findByUsername",
         query = "SELECT p " +
                 "FROM Publication p " +
-                "LEFT JOIN FETCH p.tags " + // <--- A CURA DO PROBLEMA
+                "LEFT JOIN FETCH p.tags " +
                 "WHERE p.uploader.username = :username")
 })
 public class Publication extends Versionable implements Serializable {
@@ -42,7 +40,7 @@ public class Publication extends Versionable implements Serializable {
     @NotNull
     private String filepath;
 
-    // Relação: Quem fez o upload? (Muitas publicações, 1 User)
+    // Relação: Muitas publicações, 1 User
     @ManyToOne
     @JoinColumn(name = "uploader_name", nullable = false)
     @NotNull
@@ -57,8 +55,8 @@ public class Publication extends Versionable implements Serializable {
     @NotNull
     private String type;
 
-    @Enumerated(EnumType.STRING)
-    private PublicationStatus status = PublicationStatus.VISIBLE; // EP08 (VISIBLE, HIDDEN)
+    @Column(nullable = false)
+    private boolean visible = true;
 
     private String hideReason;
     private Date hideDate;
@@ -76,10 +74,6 @@ public class Publication extends Versionable implements Serializable {
 
     @OneToMany(mappedBy = "publication", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY) //do I need cascade and fetch?
     private List<Comment> comments = new ArrayList<>();
-
-
-    @OneToMany(mappedBy = "publication", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
-    private List<CriticalAnalysis> criticalAnalyses = new ArrayList<>();
 
     @OneToMany(mappedBy = "publication", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<PublicationHistory> history = new ArrayList<>();
@@ -175,13 +169,8 @@ public class Publication extends Versionable implements Serializable {
         this.type = type;
     }
 
-    public PublicationStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(PublicationStatus status) {
-        this.status = status;
-    }
+    public boolean isVisible() { return visible; }
+    public void setVisible(boolean visible) { this.visible = visible; }
 
     public String getHideReason() {
         return hideReason;
@@ -221,14 +210,6 @@ public class Publication extends Versionable implements Serializable {
 
     public void setComments(List<Comment> comments) {
         this.comments = comments;
-    }
-
-    public List<CriticalAnalysis> getCriticalAnalyses() {
-        return criticalAnalyses;
-    }
-
-    public void setCriticalAnalyses(List<CriticalAnalysis> criticalAnalyses) {
-        this.criticalAnalyses = criticalAnalyses;
     }
 
     public List<PublicationHistory> getHistory() {

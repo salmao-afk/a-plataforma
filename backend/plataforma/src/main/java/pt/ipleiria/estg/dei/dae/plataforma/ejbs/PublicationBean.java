@@ -164,7 +164,7 @@ public class PublicationBean {
             queryStr.append(" AND LOWER(p.scientificArea) LIKE :area");
         }
 
-        // Filtro de Tag (AQUI ESTÁ A CORREÇÃO)
+        // Filtro de Tag
         if (tagsStr != null && !tagsStr.isEmpty()) {
             queryStr.append(" AND t.name = :tagName");
         }
@@ -188,7 +188,7 @@ public class PublicationBean {
 
     public Publication findOrFail(long id) throws MyEntityNotFoundException {
         try {
-            // LEFT JOIN FETCH é obrigatório para carregar as tags sem erro
+            // LEFT JOIN FETCH por causa do Lazy Loading
             return em.createQuery(
                             "SELECT p FROM Publication p LEFT JOIN FETCH p.tags WHERE p.id = :id",
                             Publication.class)
@@ -198,8 +198,6 @@ public class PublicationBean {
             throw new MyEntityNotFoundException("Publicação não encontrada com id: " + id);
         }
     }
-
-    // --- MÉTODOS QUE PEDISTE EXPLICITAMENTE ---
 
     public Publication getPublication(long id) throws MyEntityNotFoundException {
         return findOrFail(id);
@@ -345,9 +343,22 @@ public class PublicationBean {
         return em.find(Publication.class, id);
     }
 
-    // Adiciona isto
+    public void toggleVisibility(long publicationId) throws MyEntityNotFoundException {
+        Publication publication = em.find(Publication.class, publicationId);
+
+        if (publication == null) {
+            throw new MyEntityNotFoundException("Publicação não encontrada com id: " + publicationId);
+        }
+
+        boolean estadoAntigo = publication.isVisible();
+
+        publication.setVisible(!estadoAntigo);
+
+        em.flush();
+    }
+
     public List<Publication> findHidden() {
-        return em.createQuery("SELECT p FROM Publication p WHERE p.hidden = TRUE ORDER BY p.uploadDate DESC", Publication.class)
+        return em.createQuery("SELECT p FROM Publication p WHERE p.visible = FALSE ORDER BY p.publicationDate DESC", Publication.class)
             .getResultList();
     }
 }

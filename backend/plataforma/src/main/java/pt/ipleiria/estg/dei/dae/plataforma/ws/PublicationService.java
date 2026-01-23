@@ -272,6 +272,18 @@ public class PublicationService {
         return Response.ok("Descrição atualizada com sucesso").build();
     }
 
+    @PATCH
+    @Path("/{id}/alterar-visibilidade")
+    @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
+    public Response toggleVisibility(@PathParam("id") long id) {
+        try {
+            publicationBean.toggleVisibility(id);
+            return Response.ok("Visibilidade alterada com sucesso.").build();
+        } catch (MyEntityNotFoundException e) {
+            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
+        }
+    }
+
     @GET
     @Path("/ocultas")
     @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
