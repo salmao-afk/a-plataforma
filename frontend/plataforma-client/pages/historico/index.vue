@@ -28,7 +28,6 @@ const isAdmin = computed(() => authStore.user?.role === 'ADMINISTRATOR');
 function parseBackendDate(dateInput) {
     if (!dateInput) return new Date();
 
-    // 1. Array Java [ano, mes, dia, hora, min, seg]
     if (Array.isArray(dateInput)) {
         return new Date(
             dateInput[0],
@@ -40,19 +39,16 @@ function parseBackendDate(dateInput) {
         );
     }
 
-    // 2. Timestamp numérico
     if (typeof dateInput === 'number') return new Date(dateInput);
 
-    // 3. String
     if (typeof dateInput === 'string') {
-        // Tenta converter diretamente (ISO ou formato Java 'Fri Jan 22...')
+
         const d = new Date(dateInput);
         if (!isNaN(d.getTime())) return d;
 
-        // Tenta formato PT 'dd/MM/yyyy HH:mm'
         if (dateInput.includes('/')) {
             try {
-                // Remove espaços extra
+
                 const clean = dateInput.trim();
                 const [datePart, timePart] = clean.split(' ');
                 const [day, month, year] = datePart.split('/');

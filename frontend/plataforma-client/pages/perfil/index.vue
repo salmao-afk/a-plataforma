@@ -7,123 +7,102 @@ const authStore = useAuthStore();
 const api = config.public.apiBase;
 
 // --- ESTADO ---
-const activeTab = ref('dados'); // Abas: 'dados', 'editar', 'publicacoes', 'tags'
+const activeTab = ref('dados');
 const isLoading = ref(false);
 
 const userProfile = ref({});
 const myPublications = ref([]);
 const myTags = ref([]);
 
-// Formulário de Dados Pessoais
-const editForm = ref({
-    name: '',
-    email: ''
-});
+// Forms
+const editForm = ref({ name: '', email: '' });
+const passwordForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' });
 
-// Formulário de Password (NOVO)
-const passwordForm = reactive({
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-});
+// --- TOAST (NOTIFICAÇÕES BONITAS) ---
+const toast = ref({ show: false, message: '', type: 'success' });
 
-// --- 1. BUSCAR DADOS DO PERFIL (CORRIGIDO) ---
+function showToast(message, type = 'success') {
+    toast.value = { show: true, message, type };
+    setTimeout(() => { toast.value.show = false; }, 4000);
+}
+
+// --- 1. BUSCAR DADOS ---
 async function fetchProfileData() {
     if (!authStore.token) return;
-
     isLoading.value = true;
-    console.log(">>> A carregar perfil...");
 
     try {
-        // Buscar User
         const response = await $fetch(`${api}/utilizadores/me`, {
             headers: { Authorization: `Bearer ${authStore.token}` }
         });
 
-        // O Backend envia uma lista [DTO]. Vamos extrair.
         let dto = Array.isArray(response) ? response[0] : response;
 
-        // Se o DTO tiver o objeto 'user' lá dentro
         if (dto && dto.user) {
             userProfile.value = dto.user;
-
-            // Preencher listas se vierem no DTO
             if (dto.publicacoes) myPublications.value = dto.publicacoes;
         } else {
-            // Fallback
             userProfile.value = dto;
         }
 
-        // Preencher o formulário de edição com os dados atuais
         if (userProfile.value) {
             editForm.value.name = userProfile.value.name || '';
             editForm.value.email = userProfile.value.email || '';
         }
 
-        // Buscar Tags (separado, caso não venha no DTO)
         try {
             const tags = await $fetch(`${api}/utilizadores/me/tags-subscritas`, {
                 headers: { Authorization: `Bearer ${authStore.token}` }
             });
             myTags.value = tags || [];
-        } catch (e) { console.warn("Tags erro:", e); }
+        } catch (e) { }
 
     } catch (error) {
-        console.error("Erro perfil:", error);
-        alert("Erro ao carregar dados. Tente fazer login novamente.");
+        showToast("Erro ao carregar dados. Faça login novamente.", "error");
     } finally {
-        isLoading.value = false; // Garante que o loading pára
+        isLoading.value = false;
     }
 }
 
-// --- 2. ATUALIZAR NOME E EMAIL ---
+// --- 2. ATUALIZAR DADOS ---
 async function updateProfile() {
     try {
-        // O Backend espera um UserProfileDTO que contém um UserDTO
         const payload = {
-            user: {
-                name: editForm.value.name,
-                email: editForm.value.email
-            }
+            user: { name: editForm.value.name, email: editForm.value.email }
         };
 
-        const response = await $fetch(`${api}/utilizadores/me`, {
+        await $fetch(`${api}/utilizadores/me`, {
             method: 'PUT',
             headers: { Authorization: `Bearer ${authStore.token}` },
             body: payload
         });
 
-        alert("Dados atualizados com sucesso!");
+        showToast("Dados atualizados com sucesso!", "success");
 
-        // Atualiza visualmente
         userProfile.value.name = editForm.value.name;
         userProfile.value.email = editForm.value.email;
-
-        // Atualiza a store (Header)
         authStore.user.name = editForm.value.name;
         authStore.user.email = editForm.value.email;
 
     } catch (error) {
         console.error(error);
-        alert("Erro ao atualizar perfil.");
+        showToast("Erro ao atualizar perfil.", "error");
     }
 }
 
-// --- 3. ALTERAR PASSWORD (NOVO) ---
+// --- 3. ALTERAR PASSWORD ---
 async function changeUserPassword() {
-    // Validação frontend
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-        alert("A nova password e a confirmação não coincidem.");
+        showToast("A nova password e a confirmação não coincidem.", "error");
         return;
     }
 
     if (!passwordForm.oldPassword || !passwordForm.newPassword) {
-        alert("Preencha todos os campos da password.");
+        showToast("Preencha todos os campos da password.", "error");
         return;
     }
 
     try {
-        // Chama o endpoint específico de password
         await $fetch(`${api}/auth/alterar-password`, {
             method: 'PUT',
             headers: { Authorization: `Bearer ${authStore.token}` },
@@ -134,27 +113,29 @@ async function changeUserPassword() {
             }
         });
 
-        alert("Password alterada com sucesso!");
+        showToast("Password alterada com sucesso!", "success");
 
-        // Limpar campos
         passwordForm.oldPassword = '';
         passwordForm.newPassword = '';
         passwordForm.confirmPassword = '';
 
     } catch (error) {
         console.error(error);
-        alert("Erro ao alterar password: " + (error.response?._data?.message || error.message));
+        const backendMsg = error.response?._data?.message || error.response?._data || "Erro desconhecido";
+        // Tenta mostrar mensagem amigável se for erro comum
+        if (backendMsg.includes("incorreta")) {
+            showToast("A password antiga está incorreta.", "error");
+        } else {
+            showToast("Erro ao alterar password.", "error");
+        }
     }
 }
 
-onMounted(() => {
-    // Pequeno delay para garantir que a store hidratou
-    setTimeout(() => fetchProfileData(), 100);
-});
+onMounted(() => setTimeout(() => fetchProfileData(), 100));
 </script>
 
 <template>
-    <div class="max-w-6xl mx-auto py-8 px-4 font-sans text-slate-800">
+    <div class="max-w-6xl mx-auto py-8 px-4 font-sans text-slate-800 relative">
 
         <div v-if="isLoading" class="flex justify-center items-center py-20">
             <div class="text-indigo-600 font-bold text-lg animate-pulse">A carregar o seu perfil...</div>
@@ -170,8 +151,8 @@ onMounted(() => {
                         </div>
                         <h2 class="font-bold text-gray-900 text-lg">@{{ userProfile?.username }}</h2>
                         <span class="inline-block bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full font-semibold mt-1 uppercase">
-              {{ userProfile?.role }}
-            </span>
+                          {{ userProfile?.role }}
+                        </span>
                     </div>
 
                     <nav class="flex flex-col p-2 space-y-1">
@@ -217,7 +198,7 @@ onMounted(() => {
                             <input v-model="editForm.email" type="email" class="input-form" required />
                         </div>
                         <div class="pt-2">
-                            <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 transition w-full md:w-auto">
+                            <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 transition w-full md:w-auto shadow-md">
                                 Atualizar Dados
                             </button>
                         </div>
@@ -248,7 +229,7 @@ onMounted(() => {
                             </div>
 
                             <div class="pt-2 text-right">
-                                <button type="submit" class="bg-gray-800 text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-900 transition w-full sm:w-auto">
+                                <button type="submit" class="bg-gray-800 text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-900 transition w-full sm:w-auto shadow-md">
                                     Mudar Password
                                 </button>
                             </div>
@@ -264,8 +245,8 @@ onMounted(() => {
                             <h3 class="font-bold text-lg">{{ pub.title }}</h3>
                             <p class="text-sm text-gray-500">{{ pub.scientificArea }} - {{ pub.type }}</p>
                             <div class="mt-2 flex gap-2">
-                                <NuxtLink :to="`/publicacoes/${pub.id}`" class="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded">Ver</NuxtLink>
-                                <NuxtLink :to="`/publicacoes/editar/${pub.id}`" class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">Editar</NuxtLink>
+                                <NuxtLink :to="`/publicacoes/${pub.id}`" class="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded font-bold hover:bg-indigo-100">Ver</NuxtLink>
+                                <NuxtLink :to="`/publicacoes/editar/${pub.id}`" class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded font-bold hover:bg-gray-200">Editar</NuxtLink>
                             </div>
                         </div>
                     </div>
@@ -281,6 +262,24 @@ onMounted(() => {
 
             </main>
         </div>
+
+        <Transition name="toast">
+            <div
+                v-if="toast.show"
+                class="fixed top-24 right-5 z-50 flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl backdrop-blur-md border border-white/20 min-w-[300px]"
+                :class="toast.type === 'success' ? 'bg-emerald-500/90 text-white' : 'bg-rose-500/90 text-white'"
+            >
+                <div class="bg-white/20 p-2 rounded-full">
+                    <svg v-if="toast.type === 'success'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                    <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </div>
+                <div>
+                    <h4 class="font-bold text-sm">{{ toast.type === 'success' ? 'Sucesso' : 'Erro' }}</h4>
+                    <p class="text-sm opacity-90">{{ toast.message }}</p>
+                </div>
+            </div>
+        </Transition>
+
     </div>
 </template>
 
@@ -296,5 +295,17 @@ onMounted(() => {
 .label-form { @apply block text-sm font-medium text-gray-700 mb-1; }
 .input-form { @apply w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition; }
 .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Animação do Toast */
+.toast-enter-active,
+.toast-leave-active {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.toast-enter-from,
+.toast-leave-to {
+    opacity: 0;
+    transform: translateX(100px) scale(0.9);
+}
 </style>
