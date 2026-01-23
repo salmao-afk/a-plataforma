@@ -1,20 +1,20 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'; // Adicionei 'watch'
+import { ref, computed, onMounted, watch } from 'vue';
 import { useAuthStore } from '~/stores/auth-store.js';
 import { usePublicationsStore } from '~/stores/publications-store.js';
+// Importação do Componente Visual de Estatísticas
+import PublicationStats from '~/components/rating/PublicationStats.vue';
 
-const config = useRuntimeConfig(); // Para aceder ao URL da API
+const config = useRuntimeConfig();
 const authStore = useAuthStore();
 const pubStore = usePublicationsStore();
 
 const searchQuery = ref("");
 const isDeleteModalOpen = ref(false);
 const publicationToDelete = ref(null);
-
-// --- NOVO: Variável para controlar o filtro ---
 const showMine = ref(false);
 
-// Usamos os dados diretamente da Store
+// Filtro Local
 const filteredPublications = computed(() => {
   if (!searchQuery.value) return pubStore.publications;
   const q = searchQuery.value.toLowerCase();
@@ -27,22 +27,19 @@ const filteredPublications = computed(() => {
   });
 });
 
-// --- LÓGICA DE BUSCA ALTERADA ---
+// Busca Publicações
 const fetchPublications = async () => {
   if (!authStore.token) return;
 
-  pubStore.isLoading = true; // Ativa o loading manual se necessário
+  pubStore.isLoading = true;
 
   try {
     if (showMine.value) {
-      // CASO 1: Apenas as minhas (Chama endpoint /me)
       const data = await $fetch(`${config.public.apiBase}/publicacoes/me`, {
         headers: { Authorization: `Bearer ${authStore.token}` }
       });
-      // Atualizamos a lista da store manualmente com os dados recebidos
       pubStore.publications = data;
     } else {
-      // CASO 2: Todas (Usa a ação normal da store)
       await pubStore.fetchPublications();
     }
   } catch (error) {
@@ -65,7 +62,6 @@ const confirmDelete = async () => {
   if (!publicationToDelete.value) return;
   try {
     await pubStore.deletePublication(publicationToDelete.value.id);
-    // Se estivermos no filtro "minhas", convém recarregar para garantir
     if(showMine.value) fetchPublications();
     isDeleteModalOpen.value = false;
   } catch (e) {
@@ -73,17 +69,14 @@ const confirmDelete = async () => {
   }
 };
 
-// Observa mudanças na checkbox para recarregar automaticamente
-watch(showMine, () => {
-  fetchPublications();
-});
+watch(showMine, () => { fetchPublications(); });
 
 onMounted(() => { fetchPublications(); });
 </script>
 
 <template>
   <div class="max-w-6xl mx-auto space-y-6">
-    <div v-if="pubStore.isLoading" class="text-center py-4 text-blue-600 font-semibold">A carregar publicações...</div>
+    <div v-if="pubStore.isLoading" class="text-center py-4 text-blue-600 font-semibold animate-pulse">A carregar publicações...</div>
 
     <div v-if="!authStore.token" class="flex flex-col items-center justify-center py-20 bg-white rounded-xl shadow-sm border border-gray-100 text-center px-4">
       <NuxtLink to="/auth/login" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">Fazer Login</NuxtLink>
@@ -98,12 +91,7 @@ onMounted(() => { fetchPublications(); });
         </div>
 
         <div class="flex items-center bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
-          <input
-              type="checkbox"
-              id="filterMine"
-              v-model="showMine"
-              class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
-          >
+          <input type="checkbox" id="filterMine" v-model="showMine" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer">
           <label for="filterMine" class="ml-2 text-sm font-medium text-gray-700 cursor-pointer select-none">
             Ver apenas as minhas
           </label>
@@ -129,11 +117,11 @@ onMounted(() => { fetchPublications(); });
       </div>
 
       <div v-else class="grid grid-cols-1 gap-4">
-        <div v-for="pub in filteredPublications" :key="pub.id" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition flex flex-col md:flex-row justify-between items-start gap-4">
+        <div v-for="pub in filteredPublications" :key="pub.id" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition flex flex-col md:flex-row justify-between items-start gap-4 group">
 
           <div class="flex gap-4 w-full">
             <div class="shrink-0 hidden sm:block">
-              <div class="h-12 w-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center">
+              <div class="h-12 w-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
               </div>
             </div>
@@ -157,6 +145,15 @@ onMounted(() => { fetchPublications(); });
               </div>
 
               <p class="text-gray-600 mt-2 line-clamp-2 text-sm">{{ pub.description }}</p>
+
+              <div class="mt-4 pt-3 border-t border-gray-50 flex items-center">
+                <PublicationStats
+                    :average="pub.averageRating || 0"
+                    :ratingsCount="pub.ratingsCount || 0"
+                    :commentsCount="pub.commentsCount || 0"
+                />
+              </div>
+
             </div>
           </div>
 
