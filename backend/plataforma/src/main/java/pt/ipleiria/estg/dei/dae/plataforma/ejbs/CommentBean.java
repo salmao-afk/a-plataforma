@@ -4,6 +4,7 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Comment;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.Publication;
@@ -61,6 +62,7 @@ public class CommentBean {
 
     public void toggleVisibility(long commentId, String adminUsername, boolean hidden, String motive) throws MyEntityNotFoundException {
         Comment comment = findOrFail(commentId);
+        em.lock(comment, LockModeType.OPTIMISTIC);
         User responsibleUser = userBean.findOrFail(adminUsername);
         if(hidden){
             if(motive == null|| motive.isEmpty()){

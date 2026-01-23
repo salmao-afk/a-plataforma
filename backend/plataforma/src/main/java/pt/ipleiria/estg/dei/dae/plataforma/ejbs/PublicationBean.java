@@ -3,6 +3,7 @@ package pt.ipleiria.estg.dei.dae.plataforma.ejbs;
 import jakarta.annotation.Resource;
 import jakarta.ejb.*;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -15,7 +16,7 @@ import pt.ipleiria.estg.dei.dae.plataforma.entities.Tag;
 import pt.ipleiria.estg.dei.dae.plataforma.entities.User;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityExistsException;
 import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyEntityNotFoundException;
-
+import pt.ipleiria.estg.dei.dae.plataforma.exceptions.MyOptimisticLockException;
 
 
 import java.io.File;
@@ -227,10 +228,11 @@ public class PublicationBean {
 
     // --- UPDATE ---
 
-    public void update(long id, PublicationDTO dto, String modifierUsername) throws MyEntityNotFoundException {
+    public void update(long id, PublicationDTO dto, String modifierUsername) throws MyEntityNotFoundException{
         Publication publication = findOrFail(id);
         User modifier = userBean.findOrFail(modifierUsername);
 
+        em.lock(publication, LockModeType.OPTIMISTIC);
         //Snapshot histórico
         PublicationHistory history = new PublicationHistory(modifier, publication);
         em.persist(history);
@@ -262,18 +264,6 @@ public class PublicationBean {
     }
 
     // --- AUXILIARES TAGS ---
-
-    private Tag findOrCreateTag(String tagName) {
-        try {
-            return em.createQuery("SELECT t FROM Tag t WHERE t.name = :name", Tag.class)
-                    .setParameter("name", tagName)
-                    .getSingleResult();
-        } catch (NoResultException e) {
-            Tag newTag = new Tag(tagName, "Gerada automaticamente");
-            em.persist(newTag);
-            return newTag;
-        }
-    }
 
     public void addTag(long publicationId, String tagName) throws MyEntityNotFoundException, MyEntityExistsException {
         Publication publication = findOrFail(publicationId);
