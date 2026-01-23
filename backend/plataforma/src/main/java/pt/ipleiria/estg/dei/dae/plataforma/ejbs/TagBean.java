@@ -115,4 +115,10 @@ public class TagBean {
             tag.removeSubscriber(user);
         }
     }
+
+    // Adiciona isto (assumindo que Tag tem campo 'hidden')
+    public List<Tag> findHidden() {
+        return em.createQuery("SELECT t FROM Tag t WHERE t.hidden = TRUE", Tag.class)
+            .getResultList();
+    }
 }

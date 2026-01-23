@@ -97,4 +97,12 @@ public class TagService {
 
         return Response.ok("Subscrição removida.").build();
     }
+
+    @GET
+    @Path("/ocultas")
+    @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getHiddenTags() {
+        return Response.ok(TagDTO.from(tagBean.findHidden())).build();
+    }
 }

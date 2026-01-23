@@ -344,4 +344,10 @@ public class PublicationBean {
     public Publication find(long id) {
         return em.find(Publication.class, id);
     }
+
+    // Adiciona isto
+    public List<Publication> findHidden() {
+        return em.createQuery("SELECT p FROM Publication p WHERE p.hidden = TRUE ORDER BY p.uploadDate DESC", Publication.class)
+            .getResultList();
+    }
 }

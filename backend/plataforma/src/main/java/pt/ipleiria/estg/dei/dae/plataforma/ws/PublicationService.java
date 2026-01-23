@@ -212,6 +212,7 @@ public class PublicationService {
 
     @DELETE
     @Path("/{pubid}/tags/{tagid}")
+    @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
     public Response removeTagFromPublication(@PathParam("pubid") long id, @PathParam("tagid") long tagId)
             throws MyEntityNotFoundException {
 
@@ -241,7 +242,6 @@ public class PublicationService {
 
     @DELETE
     @Path("/{id}/rating")
-    @Authenticated
     public Response deleteRating(@PathParam("id") long publicationId)
             throws MyEntityNotFoundException {
 
@@ -262,7 +262,6 @@ public class PublicationService {
 
     @PATCH
     @Path("/{id}/editar-descricao")
-    @Authenticated
     @Consumes(MediaType.APPLICATION_JSON)
     public Response updateDescription(@PathParam("id") long publicationId, PublicationDTO dto) throws MyEntityNotFoundException
     {
@@ -271,6 +270,22 @@ public class PublicationService {
         }
         publicationBean.updateDescription(publicationId, dto.getDescription());
         return Response.ok("Descrição atualizada com sucesso").build();
+    }
+
+    @GET
+    @Path("/ocultas")
+    @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getHiddenPublications() {
+        return Response.ok(PublicationDTO.from(publicationBean.findHidden())).build();
+    }
+
+    @GET
+    @Path("/comentarios-ocultos-globais")
+    @RolesAllowed({"ADMINISTRATOR", "RESPONSIBLE"})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getAllHiddenComments() {
+        return Response.ok(CommentDTO.from(commentBean.findHidden())).build();
     }
 
 }
