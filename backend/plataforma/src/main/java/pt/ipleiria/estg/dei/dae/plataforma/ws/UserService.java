@@ -70,7 +70,7 @@ public class UserService {
     @GET
     @RolesAllowed({"ADMINISTRATOR"})
     public List<UserDTO> getAllUsers() {
-        return getAllUsers();
+        return userBean.getAllUsers();
     }
 
     //Obter um utilizador
